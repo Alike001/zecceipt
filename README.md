@@ -12,9 +12,27 @@ Zecceipt is a merchant payment-confirmation application for Zcash Testnet. A mer
 - No custody, signing, wallet seeds, private keys, or movement of merchant funds.
 - No claim that shielded addresses, amounts, or plaintext transaction details can be revealed.
 
-## Status
+## Development
 
-The repository is being bootstrapped. Application setup and verified development commands will be added in [Issue #2](https://github.com/Alike001/zecceipt/issues/2).
+Requirements:
+
+- Node.js 20.9 or newer
+- npm, using the committed `package-lock.json`
+
+```bash
+npm ci
+npm run dev
+```
+
+Before opening a pull request:
+
+```bash
+npm run verify
+```
+
+This runs formatting, linting, TypeScript, unit/component tests, a repository secret check, and the production build.
+
+Application implementation is tracked in the [Zecceipt MVP issues](https://github.com/Alike001/zecceipt/issues).
 
 Follow progress in the [Zecceipt MVP milestone](https://github.com/Alike001/zecceipt/milestone/1).
 

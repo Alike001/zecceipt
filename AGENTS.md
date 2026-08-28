@@ -16,7 +16,19 @@ Zecceipt confirms transparent Zcash Testnet payments and turns matched transacti
 
 ## Commands
 
-Application commands are not established yet. Issue #2 must add and verify install, format check, lint, typecheck, test, and production-build scripts before this section is updated.
+Use the committed npm lockfile. Node.js 20.9 or newer is required.
+
+```text
+npm ci
+npm run dev
+npm run format:check
+npm run lint
+npm run typecheck
+npm run test
+npm run secret:check
+npm run build
+npm run verify
+```
 
 ## Quality Gates
 

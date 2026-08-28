@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+main {
+  display: grid;
+  min-height: 100svh;
+  place-content: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+p {
+  max-width: 42rem;
+  color: #52525b;
+  line-height: 1.6;
+}
