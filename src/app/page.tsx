@@ -1,11 +1,5 @@
+import { LandingPage } from "@/components/marketing/landing-page";
+
 export default function Home() {
-  return (
-    <main>
-      <h1>Zecceipt</h1>
-      <p>
-        The application foundation is ready. Product interface work begins in
-        Issue #3.
-      </p>
-    </main>
-  );
+  return <LandingPage network={{ status: "loading" }} />;
 }
