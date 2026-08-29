@@ -34,6 +34,25 @@ const rpcMethods = [
 ] as const;
 
 export function LandingPage({ network }: LandingPageProps) {
+  const hasSnapshot =
+    network.status === "live" ||
+    network.status === "syncing" ||
+    network.status === "stale";
+  const previewBlockHeight = hasSnapshot
+    ? network.snapshot.blockHeight.toLocaleString("en")
+    : network.status === "unavailable"
+      ? "Unavailable"
+      : "Loading live data…";
+  const previewRpcStatus = hasSnapshot
+    ? network.status === "live"
+      ? "Connected"
+      : network.status === "syncing"
+        ? "Node syncing"
+        : "Data may be stale"
+    : network.status === "unavailable"
+      ? "Verification paused"
+      : "Connecting…";
+
   return (
     <main className="landing">
       <div className="landing__dark">
@@ -85,12 +104,14 @@ export function LandingPage({ network }: LandingPageProps) {
               <div>
                 <span className="data-label">Exact amount</span>
                 <strong className="invoice-preview__amount mono">
-                  0.04200137 TAZ
+                  Generated per invoice
                 </strong>
                 <span className="data-label">
                   Transparent address · Testnet
                 </span>
-                <code className="invoice-preview__address">tm…9n7dL8k3</code>
+                <code className="invoice-preview__address">
+                  Merchant t-address
+                </code>
               </div>
               <div
                 className="qr-preview"
@@ -107,11 +128,11 @@ export function LandingPage({ network }: LandingPageProps) {
               </span>
               <span>
                 <small>Block height</small>
-                Loading live data…
+                {previewBlockHeight}
               </span>
               <span>
                 <small>RPC status</small>
-                Connecting…
+                {previewRpcStatus}
               </span>
             </div>
           </div>

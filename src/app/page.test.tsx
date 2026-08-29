@@ -1,11 +1,29 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import Home from "@/app/page";
 
+const mocks = vi.hoisted(() => ({ getLiveNetworkView: vi.fn() }));
+
+vi.mock("@/lib/zcash/network", () => ({
+  getLiveNetworkView: mocks.getLiveNetworkView,
+}));
+
 describe("Home", () => {
-  it("explains the transparent Testnet payment promise", () => {
-    render(<Home />);
+  beforeEach(() => {
+    mocks.getLiveNetworkView.mockResolvedValue({
+      status: "live",
+      snapshot: {
+        network: "testnet",
+        blockHeight: 4_310_128,
+        observedAt: "2026-08-29T12:00:00.000Z",
+        rpcMethods: ["getblockchaininfo", "getblockcount"],
+      },
+    });
+  });
+
+  it("explains the transparent Testnet payment promise", async () => {
+    render(await Home());
 
     expect(
       screen.getByRole("heading", {
@@ -19,15 +37,15 @@ describe("Home", () => {
     expect(
       screen.getAllByRole("link", { name: /create (an )?invoice/i }),
     ).toHaveLength(3);
-    expect(screen.getByText("0.04200137 TAZ")).toBeInTheDocument();
+    expect(screen.getByText("Generated per invoice")).toBeInTheDocument();
     expect(screen.queryByText("0.04200137 ZEC")).not.toBeInTheDocument();
   });
 
-  it("renders an honest loading slot instead of a hard-coded block height", () => {
-    render(<Home />);
+  it("renders live block data instead of a hard-coded block height", async () => {
+    render(await Home());
 
-    expect(screen.getAllByText("Loading live data…")).toHaveLength(2);
-    expect(screen.getByLabelText("Live Zcash network")).toHaveAttribute(
+    expect(screen.getAllByText("4,310,128")).toHaveLength(2);
+    expect(screen.getByLabelText("Live Zcash network")).not.toHaveAttribute(
       "aria-busy",
     );
   });

@@ -20,6 +20,7 @@ const createdResponse: CreateInvoiceResponse = {
     expiresAt: "2026-08-29T12:30:00.000Z",
     confirmationTarget: 1,
     network: "testnet",
+    createdAt: "2026-08-29T12:00:00.000Z",
   },
   merchantManagement: {
     invoiceId: "invoice-id",

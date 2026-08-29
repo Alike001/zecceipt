@@ -282,16 +282,26 @@ export function CheckoutPaymentSummary({
             )}
           </div>
 
-          <a
-            href={request.zip321Uri}
-            className={styles.walletLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Open payment request in wallet"
-          >
-            <span>Open in Zcash Wallet</span>
-            <span aria-hidden="true">↗</span>
-          </a>
+          {isExpired ? (
+            <span
+              className={styles.walletLink}
+              aria-disabled="true"
+              title="This payment request has expired"
+            >
+              <span>Payment request expired</span>
+            </span>
+          ) : (
+            <a
+              href={request.zip321Uri}
+              className={styles.walletLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open payment request in wallet"
+            >
+              <span>Open in Zcash Wallet</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+          )}
         </div>
       </div>
 

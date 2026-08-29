@@ -104,7 +104,7 @@ function toMatchedOutput(output: PaymentOutputRecord): MatchedPaymentOutput {
   };
 }
 
-function toPaymentView(
+export function toPaymentStatusView(
   invoice: InvoiceRecord,
   outputs: readonly PaymentOutputRecord[],
   observedAt: string,
@@ -208,7 +208,7 @@ export async function verifyInvoicePayment(
 
   if (TERMINAL_EXPIRY_STATUSES.includes(invoice.status)) {
     return {
-      payment: toPaymentView(invoice, existingOutputs, observedAt),
+      payment: toPaymentStatusView(invoice, existingOutputs, observedAt),
       rpcEvidence: [],
     };
   }
@@ -329,7 +329,7 @@ export async function verifyInvoicePayment(
     if (!reconciled) throw new InvoiceNotFoundError();
 
     return {
-      payment: toPaymentView(
+      payment: toPaymentStatusView(
         reconciled.invoice,
         reconciled.outputs,
         observedAt,

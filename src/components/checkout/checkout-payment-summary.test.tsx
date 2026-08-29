@@ -222,5 +222,11 @@ describe("CheckoutPaymentSummary", () => {
     );
 
     expect(screen.getByText("Expired")).toBeInTheDocument();
+    expect(
+      screen.getByTitle("This payment request has expired"),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(
+      screen.queryByRole("link", { name: "Open in Zcash Wallet" }),
+    ).not.toBeInTheDocument();
   });
 });
