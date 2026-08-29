@@ -217,6 +217,7 @@ export function PaymentStatusTimeline({
                 aria-valuenow={view.confirmations}
                 aria-valuemin={0}
                 aria-valuemax={view.confirmationTarget}
+                aria-valuetext={`${view.confirmations} of ${view.confirmationTarget} blocks confirmed (${pct}%)`}
                 aria-label={`Confirmation progress: ${view.confirmations} of ${view.confirmationTarget} blocks`}
               >
                 <div

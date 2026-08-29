@@ -270,6 +270,11 @@
   color: var(--color-zec, #f4b728);
 }
 
+.actionButton:focus-visible {
+  outline: 3px solid var(--color-info, #6ca5ff);
+  outline-offset: 2px;
+}
+
 .actionButtonPrimary {
   background: var(--color-zec, #f4b728);
   border-color: var(--color-zec, #f4b728);
@@ -290,6 +295,11 @@
 
 /* Responsive adjustments */
 @media (max-width: 48rem) {
+  .receiptHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .summaryRow {
     flex-direction: column;
     align-items: flex-start;

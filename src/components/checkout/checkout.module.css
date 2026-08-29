@@ -258,6 +258,12 @@
   color: var(--color-zec-strong, #ffc43d);
 }
 
+.walletLink:focus-visible {
+  outline: 3px solid var(--color-info, #6ca5ff);
+  outline-offset: 2px;
+  border-radius: 0.2rem;
+}
+
 /* Warnings and Metadata Footers */
 .metaFooter {
   display: grid;

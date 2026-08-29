@@ -363,6 +363,22 @@
 
 /* Responsive */
 @media (max-width: 48rem) {
+  .statusHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .invoiceInfo {
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .invoiceId {
+    overflow-wrap: anywhere;
+  }
+
   .timelineTrack {
     grid-template-columns: 1fr 1fr;
   }
