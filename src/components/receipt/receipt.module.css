@@ -295,6 +295,11 @@
 
 /* Responsive adjustments */
 @media (max-width: 48rem) {
+  .receiptHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .summaryRow {
     flex-direction: column;
     align-items: flex-start;

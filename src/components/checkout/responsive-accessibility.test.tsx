@@ -4,9 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CheckoutPaymentSummary } from "@/components/checkout/checkout-payment-summary";
 import { PaymentStatusTimeline } from "@/components/checkout/payment-status-timeline";
 import { QrCode } from "@/components/checkout/qr-code";
-import type { CheckoutSummaryViewModel, MatchedPaymentOutput } from "@/types";
+import type {
+  CheckoutPaymentRequest,
+  CheckoutSummaryViewModel,
+  MatchedPaymentOutput,
+} from "@/types";
 
-const mockRequest = {
+const mockRequest: CheckoutPaymentRequest = {
   invoiceId: "inv_qa_test_001",
   label: "Dark Forest VPN 1-Year Pass with Long Merchant Product Descriptor",
   exactAmountZec: "0.25000000",
@@ -14,9 +18,10 @@ const mockRequest = {
   recipientAddress: "tm9iP5FjDkS89nB9z4pW7r6m3K2s1v5q8x0",
   addressFingerprint: "tm9i...8x0",
   zip321Uri:
-    "zcash:tm9iP5FjDkS89nB9z4pW7r6m3K2s1v5q8x0?amount=0.25000000&message=inv_qa_test_001",
+    "zcash:tm9iP5FjDkS89nB9z4pW7r6m3K2s1v5q8x0?amount=0.25000000&label=Dark%20Forest%20VPN",
   expiresAt: new Date(Date.now() + 900000).toISOString(),
   confirmationTarget: 3,
+  network: "testnet",
 };
 
 const readyView: CheckoutSummaryViewModel = {
