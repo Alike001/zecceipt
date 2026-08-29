@@ -27,15 +27,18 @@ Open `/` and say:
 > Unified recipients are outside this MVP.
 
 Point out the server-fetched network state, Testnet height, observation time,
-and visible RPC catalog. `getblockchaininfo` and `getblockcount` are live
-evidence on this screen. If the panel says unavailable, stop: an RPC failure is
-not evidence that a customer has not paid.
+and RPC availability. Those values come from `getblockchaininfo` and
+`getblockcount`; their named evidence and the complete five-method catalog are
+shown in the network panel on `/create`. If the landing rail says unavailable,
+stop: an RPC failure is not evidence that a customer has not paid.
 
 ### 0:40 — Create the merchant invoice
 
 Open `/create`, enter the merchant's transparent Testnet address, and leave the
 field. Point out the valid-address response from the server-side
-`validateaddress` call.
+`validateaddress` call. Scroll to the live network panel and point out the named
+`getblockchaininfo` and `getblockcount` evidence alongside the five allow-listed
+methods.
 
 Enter a small Testnet amount, a recognizable label, a 30-minute expiry, and a
 confirmation target of one. Create the invoice and say:
@@ -53,7 +56,7 @@ details only; it does not store the returned private management token.
 On `/checkout/{invoiceId}`, point out:
 
 - the `testnet` badge and expiry;
-- the exact ZEC and integer-zatoshi amounts;
+- the exact TAZ and integer-zatoshi amounts;
 - the full transparent recipient plus its fingerprint;
 - the ZIP-321 QR and copy controls; and
 - the waiting status, which is not yet a payment claim.
@@ -103,16 +106,16 @@ browser and links to public checkouts.
 
 ## Screenshot and evidence checklist
 
-| Capture                                | What it proves                                                                                | Redaction/check                                                           |
-| -------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Landing page with live network panel   | Server-fetched Testnet, height, observation time, live evidence, and the five-method catalog. | Show the app URL, never the provider endpoint.                            |
-| `/create` with valid address state     | Real server-side `validateaddress` behavior and transparent-only boundary.                    | Use a Testnet receive address intended for the demo.                      |
-| Invoice success state and recent row   | Durable invoice creation and a working link to public checkout.                               | Do not open or capture the raw `merchantManagement` API object.           |
-| New public checkout before payment     | Exact amount, zatoshis, recipient, fingerprint, ZIP-321 QR, expiry, and waiting state.        | Verify the badge says Testnet.                                            |
-| Customer wallet send                   | A real customer-to-merchant Testnet action and transaction ID.                                | Hide balance, account name, unrelated history, and all recovery material. |
-| Confirming or paid timeline            | Live `getblockcount`, `getaddresstxids`, and `getrawtransaction` evidence tied to a status.   | If using the rehearsal invoice, label it clearly.                         |
-| Settled receipt after refresh          | Persisted txid/output index, amount, block data, confirmations, and public receipt.           | Confirm no management token or endpoint URL is visible.                   |
-| Unavailable state, captured separately | Honest fail-closed behavior when RPC evidence cannot be refreshed.                            | Say “unavailable,” never “unpaid.”                                        |
+| Capture                                | What it proves                                                                                 | Redaction/check                                                           |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Landing page with live network rail    | Server-fetched Testnet height, RPC availability, and observation time.                         | Show the app URL, never the provider endpoint.                            |
+| `/create` address and network panel    | Live `validateaddress`, named network evidence, five-method catalog, and transparent boundary. | Use a Testnet receive address intended for the demo.                      |
+| Invoice success state and recent row   | Durable invoice creation and a working link to public checkout.                                | Do not open or capture the raw `merchantManagement` API object.           |
+| New public checkout before payment     | Exact amount, zatoshis, recipient, fingerprint, ZIP-321 QR, expiry, and waiting state.         | Verify the badge says Testnet.                                            |
+| Customer wallet send                   | A real customer-to-merchant Testnet action and transaction ID.                                 | Hide balance, account name, unrelated history, and all recovery material. |
+| Confirming or paid timeline            | Live `getblockcount`, `getaddresstxids`, and `getrawtransaction` evidence tied to a status.    | If using the rehearsal invoice, label it clearly.                         |
+| Settled receipt after refresh          | Persisted txid/output index, amount, block data, confirmations, and public receipt.            | Confirm no management token or endpoint URL is visible.                   |
+| Unavailable state, captured separately | Honest fail-closed behavior when RPC evidence cannot be refreshed.                             | Say “unavailable,” never “unpaid.”                                        |
 
 Repository-provided fallback component captures:
 

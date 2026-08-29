@@ -16,7 +16,7 @@ transparent outputs, track their confirmations, and render a public receipt.
 
 | Surface                                | Current behavior                                                                                                                                                       |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                                    | Renders the product landing page with a server-fetched Testnet network panel.                                                                                          |
+| `/`                                    | Renders the product landing page with a server-fetched Testnet network rail showing height, RPC availability, and observation time.                                    |
 | `/create`                              | Validates the address on blur, creates a durable invoice, links to its checkout, and keeps a public recent-invoice list in browser storage.                            |
 | `/checkout/{invoiceId}`                | Loads the public invoice, renders its exact amount and ZIP-321 QR, polls immediately and every eight seconds, and displays a receipt after settlement.                 |
 | `GET /api/network`                     | Reports live/syncing/unavailable Testnet state, height, and RPC evidence. Returns `503` when live network evidence is unavailable.                                     |
@@ -39,7 +39,7 @@ as proof that an invoice is unpaid.
 
 | Method                                                                    | Visible purpose in Zecceipt                                                                       | Current integration                                                  |
 | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [`validateaddress`](https://zcash.github.io/rpc/validateaddress.html)     | Reject malformed, Mainnet, shielded, and Unified recipients before an invoice is stored.          | Called by `POST /api/invoices`.                                      |
+| [`validateaddress`](https://zcash.github.io/rpc/validateaddress.html)     | Ask the node to validate an eligible `tm` or `t2` recipient before an invoice is stored.          | Called by address checking and `POST /api/invoices`.                 |
 | [`getblockchaininfo`](https://zcash.github.io/rpc/getblockchaininfo.html) | Confirm that the endpoint serves Testnet and expose node sync state.                              | Called by invoice creation and `GET /api/network`.                   |
 | [`getblockcount`](https://zcash.github.io/rpc/getblockcount.html)         | Record invoice creation height and bound each later payment scan at the current height.           | Called by invoice creation, network proof, and payment verification. |
 | [`getaddresstxids`](https://zcash.github.io/rpc/getaddresstxids.html)     | Discover transaction IDs for the transparent recipient between creation and current height.       | Called by the invoice-status verifier.                               |
@@ -154,7 +154,7 @@ configuration.
 
 ## Run the customer-to-merchant demo
 
-1. Open <http://localhost:3000> and confirm the network panel identifies
+1. Open <http://localhost:3000> and confirm the network rail identifies
    Testnet. A syncing state is visible but not a failure; an unavailable state
    means the demo should pause.
 2. Select **Create an invoice**, or open <http://localhost:3000/create>.
