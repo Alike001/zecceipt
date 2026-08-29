@@ -20,6 +20,19 @@ function formatTimestamp(iso: string) {
   }
 }
 
+async function copyText(value: string) {
+  try {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    // The caller reports an actionable failure state.
+  }
+
+  return false;
+}
+
 export function PaymentStatusTimeline({
   view,
   rpcEvidence,
@@ -29,17 +42,19 @@ export function PaymentStatusTimeline({
   const titleId = useId();
 
   const handleCopyTxid = async (txid: string) => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(txid);
-      }
+    if (await copyText(txid)) {
       setCopiedTxid(txid);
       setScreenReaderAnnouncement(`Copied transaction ID to clipboard.`);
       setTimeout(() => setCopiedTxid(null), 2000);
-    } catch {
-      // Fallback
+    } else {
+      setCopiedTxid(null);
+      setScreenReaderAnnouncement(
+        "Unable to copy the transaction ID. Select and copy it manually.",
+      );
     }
   };
+
+  const hasRpcErrors = rpcEvidence?.some((item) => item.state === "error");
 
   // Determine active step index (0 to 3) for the stepper
   let activeStep = 0;
@@ -364,7 +379,13 @@ export function PaymentStatusTimeline({
       </div>
 
       {/* 4-Step Progress Track */}
-      <ol className={styles.timelineTrack} aria-label="Payment progress steps">
+      <ol
+        className={styles.timelineTrack}
+        aria-label="Payment progress steps"
+        data-verification-paused={
+          view.status === "rpc_unavailable" ? "true" : undefined
+        }
+      >
         <li
           className={`${styles.timelineStep} ${
             activeStep >= 0 ? styles.stepComplete : ""
@@ -464,13 +485,18 @@ export function PaymentStatusTimeline({
       {/* RPC Evidence Track if supplied */}
       {rpcEvidence && rpcEvidence.length > 0 ? (
         <div className={styles.rpcFooter}>
-          <span className={styles.rpcTitle}>Zcash RPC Evidence Verified</span>
+          <span className={styles.rpcTitle}>
+            {hasRpcErrors
+              ? "Zcash RPC Evidence — Errors Reported"
+              : "Zcash RPC Evidence Verified"}
+          </span>
           <div className={styles.rpcList}>
             {rpcEvidence.map((item, idx) => (
               <span
                 key={`${item.method}-${idx}`}
                 className={styles.rpcChip}
                 data-state={item.state}
+                aria-label={`${item.method}: ${item.state}`}
               >
                 <code>{item.method}</code>
                 {item.latencyMs !== null ? (

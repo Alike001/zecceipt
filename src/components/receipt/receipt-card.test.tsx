@@ -119,4 +119,44 @@ describe("ReceiptCard", () => {
       expect(screen.getByText("✓ Receipt Copied")).toBeInTheDocument();
     });
   });
+
+  it("does not call the receipt callback twice when it fails", async () => {
+    const onCopyDetails = vi
+      .fn()
+      .mockRejectedValue(new Error("Analytics hook unavailable"));
+    render(<ReceiptCard receipt={mockReceipt} onCopyDetails={onCopyDetails} />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Copy entire receipt summary" }),
+    );
+
+    await waitFor(() => {
+      expect(onCopyDetails).toHaveBeenCalledTimes(1);
+      expect(screen.getByText("✓ Receipt Copied")).toBeInTheDocument();
+    });
+  });
+
+  it("reports receipt copy failure without claiming success", async () => {
+    vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(
+      new Error("Clipboard permission denied"),
+    );
+    const onCopyDetails = vi
+      .fn()
+      .mockRejectedValue(new Error("No fallback available"));
+    render(<ReceiptCard receipt={mockReceipt} onCopyDetails={onCopyDetails} />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Copy entire receipt summary" }),
+    );
+
+    await waitFor(() => {
+      expect(onCopyDetails).toHaveBeenCalledTimes(1);
+      expect(
+        screen.getByText(
+          "Unable to copy the receipt. Select and copy its details manually.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("✓ Receipt Copied")).not.toBeInTheDocument();
+    });
+  });
 });

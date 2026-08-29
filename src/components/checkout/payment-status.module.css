@@ -128,6 +128,10 @@
   color: #76bf72;
 }
 
+.timelineTrack[data-verification-paused="true"] .stepComplete {
+  color: var(--color-info, #6ca5ff);
+}
+
 .stepNumber {
   font-family: var(--font-mono, monospace);
   font-size: 0.65rem;

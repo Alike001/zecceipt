@@ -42,6 +42,19 @@ function buildReceiptPlainText(receipt: ReceiptViewModel): string {
   return lines.join("\n");
 }
 
+async function copyText(value: string) {
+  try {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    // The caller reports an actionable failure state.
+  }
+
+  return false;
+}
+
 export function ReceiptCard({ receipt, onCopyDetails }: ReceiptProps) {
   const [copiedTxid, setCopiedTxid] = useState<string | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
@@ -49,34 +62,41 @@ export function ReceiptCard({ receipt, onCopyDetails }: ReceiptProps) {
   const titleId = useId();
 
   const handleCopyTxid = async (txid: string) => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(txid);
-      }
+    if (await copyText(txid)) {
       setCopiedTxid(txid);
       setScreenReaderAnnouncement(`Copied transaction hash to clipboard.`);
       setTimeout(() => setCopiedTxid(null), 2000);
-    } catch {
-      // Fallback
+    } else {
+      setCopiedTxid(null);
+      setScreenReaderAnnouncement(
+        "Unable to copy the transaction ID. Select and copy it manually.",
+      );
     }
   };
 
   const handleCopyAll = async () => {
     const text = buildReceiptPlainText(receipt);
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
+    const copiedToClipboard = await copyText(text);
+    let callbackSucceeded = false;
+
+    if (onCopyDetails) {
+      try {
+        await onCopyDetails(receipt);
+        callbackSucceeded = true;
+      } catch {
+        // A successful clipboard write remains successful if this hook fails.
       }
+    }
+
+    if (copiedToClipboard || callbackSucceeded) {
       setCopiedAll(true);
       setScreenReaderAnnouncement("Copied full receipt summary to clipboard.");
-      if (onCopyDetails) {
-        await onCopyDetails(receipt);
-      }
       setTimeout(() => setCopiedAll(false), 2000);
-    } catch {
-      if (onCopyDetails) {
-        await onCopyDetails(receipt);
-      }
+    } else {
+      setCopiedAll(false);
+      setScreenReaderAnnouncement(
+        "Unable to copy the receipt. Select and copy its details manually.",
+      );
     }
   };
 

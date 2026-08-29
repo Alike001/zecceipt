@@ -211,6 +211,9 @@ describe("PaymentStatusTimeline", () => {
     expect(screen.getByText("CONFIRMING")).toBeInTheDocument();
     expect(screen.getByRole("status")).toBeInTheDocument();
     expect(
+      screen.getByRole("list", { name: "Payment progress steps" }),
+    ).toHaveAttribute("data-verification-paused", "true");
+    expect(
       screen.queryByText(/payment received & verified/i),
     ).not.toBeInTheDocument();
   });
@@ -239,6 +242,40 @@ describe("PaymentStatusTimeline", () => {
         mockOutput1.txid,
       );
       expect(screen.getByText("✓ Copied")).toBeInTheDocument();
+    });
+  });
+
+  it("reports a failed transaction copy without claiming success", async () => {
+    vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(
+      new Error("Clipboard permission denied"),
+    );
+
+    render(
+      <PaymentStatusTimeline
+        view={{
+          invoiceId: "inv_123",
+          status: "paid",
+          expectedAmountZec: "0.25000000",
+          receivedAmountZec: "0.25000000",
+          observedAt: "2026-08-29T10:15:00.000Z",
+          outputs: [mockOutput1],
+        }}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Copy transaction ID ${mockOutput1.txid}`,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Unable to copy the transaction ID. Select and copy it manually.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("✓ Copied")).not.toBeInTheDocument();
     });
   });
 
@@ -273,5 +310,39 @@ describe("PaymentStatusTimeline", () => {
     expect(screen.getByText("Zcash RPC Evidence Verified")).toBeInTheDocument();
     expect(screen.getByText("getaddresstxids")).toBeInTheDocument();
     expect(screen.getByText("getrawtransaction")).toBeInTheDocument();
+  });
+
+  it("reports RPC evidence errors without calling them verified", () => {
+    render(
+      <PaymentStatusTimeline
+        view={{
+          invoiceId: "inv_123",
+          status: "rpc_unavailable",
+          expectedAmountZec: "0.25000000",
+          receivedAmountZec: "0.25000000",
+          message: "RPC unavailable",
+          lastKnownStatus: "paid",
+          observedAt: "2026-08-29T10:15:00.000Z",
+        }}
+        rpcEvidence={[
+          {
+            method: "getrawtransaction",
+            state: "error",
+            latencyMs: null,
+            observedAt: "2026-08-29T10:15:00.000Z",
+          },
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByText("Zcash RPC Evidence — Errors Reported"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("getrawtransaction: error"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Zcash RPC Evidence Verified"),
+    ).not.toBeInTheDocument();
   });
 });
