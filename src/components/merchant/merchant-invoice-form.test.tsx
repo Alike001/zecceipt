@@ -47,7 +47,7 @@ describe("MerchantInvoiceForm", () => {
     expect(onSubmit).toHaveBeenCalledWith(validValues);
   });
 
-  it("blocks invalid amounts without converting ZEC to floating point", () => {
+  it("blocks invalid TAZ amounts without converting them to floating point", () => {
     const onSubmit = vi.fn();
     renderForm({
       initialValues: { ...validValues, amountZec: "0.000000001" },
@@ -57,7 +57,7 @@ describe("MerchantInvoiceForm", () => {
     fireEvent.click(screen.getByRole("button", { name: /create invoice/i }));
 
     expect(
-      screen.getByText(/positive ZEC amount with no more than eight/i),
+      screen.getByText(/positive TAZ amount with no more than eight/i),
     ).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -99,6 +99,62 @@ describe("MerchantInvoiceForm", () => {
     expect(onAddressBlur).toHaveBeenLastCalledWith(
       validValues.recipientAddress,
     );
+  });
+
+  it("ignores a stale invalid address result after the recipient is edited", () => {
+    const onSubmit = vi.fn();
+    renderForm({
+      addressValidation: {
+        status: "invalid",
+        message: "This address did not pass the external check.",
+      },
+      onSubmit,
+    });
+
+    expect(
+      screen.getByText("This address did not pass the external check."),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/merchant Testnet address/i), {
+      target: { value: "tmYXBYJj1K7vhejSec5osXK2QsGa5MTisUR" },
+    });
+
+    expect(
+      screen.queryByText("This address did not pass the external check."),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /create invoice/i }));
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it("hides a stale valid address result after the recipient is edited", () => {
+    renderForm({ addressValidation: { status: "valid" } });
+
+    expect(screen.getByText("Address looks good.")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/merchant Testnet address/i), {
+      target: { value: "tmYXBYJj1K7vhejSec5osXK2QsGa5MTisUR" },
+    });
+
+    expect(screen.queryByText("Address looks good.")).not.toBeInTheDocument();
+  });
+
+  it("dismisses only the supplied field error whose field is edited", () => {
+    renderForm({
+      fieldErrors: {
+        amountZec: "The server rejected this amount.",
+        label: "The server rejected this label.",
+      },
+    });
+
+    fireEvent.change(screen.getByLabelText(/invoice label or description/i), {
+      target: { value: "Updated order label" },
+    });
+
+    expect(
+      screen.queryByText("The server rejected this label."),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("The server rejected this amount."),
+    ).toBeInTheDocument();
   });
 
   it("renders loading, server-error, and success states", () => {
@@ -160,11 +216,21 @@ describe("MerchantInvoiceForm", () => {
     expect(
       screen.getByRole("heading", { name: "Recent invoices" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("0.04200000 ZEC")).toBeInTheDocument();
+    expect(screen.getByText("0.04200000 TAZ")).toBeInTheDocument();
     expect(screen.getByText("Confirming")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Order #1048/i })).toHaveAttribute(
       "href",
       "/pay/inv_1048",
     );
+  });
+
+  it("uses TAZ for every visible Testnet amount and help message", () => {
+    renderForm();
+
+    expect(screen.getAllByText("TAZ")).toHaveLength(2);
+    expect(
+      screen.getByText(/Use TAZ, which has no real monetary value/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/\bZEC\b/i)).not.toBeInTheDocument();
   });
 });

@@ -30,7 +30,7 @@ const CONFIRMATION_OPTIONS = [
 ] as const;
 
 const TESTNET_TRANSPARENT_ADDRESS = /^(?:tm|t2)[1-9A-HJ-NP-Za-km-z]{33}$/;
-const ZEC_AMOUNT = /^(?:0|[1-9]\d*)(?:\.\d{1,8})?$/;
+const TAZ_AMOUNT = /^(?:0|[1-9]\d*)(?:\.\d{1,8})?$/;
 
 const STATUS_LABELS: Record<RecentInvoiceSummary["status"], string> = {
   waiting: "Waiting",
@@ -56,9 +56,9 @@ function validate(values: MerchantInvoiceFormValues): MerchantFormErrors {
 
   if (!amount) {
     errors.amountZec = "Enter the amount the customer should send.";
-  } else if (!ZEC_AMOUNT.test(amount) || !/[1-9]/.test(amount)) {
+  } else if (!TAZ_AMOUNT.test(amount) || !/[1-9]/.test(amount)) {
     errors.amountZec =
-      "Enter a positive ZEC amount with no more than eight decimal places.";
+      "Enter a positive TAZ amount with no more than eight decimal places.";
   }
 
   if (!values.label.trim()) {
@@ -119,7 +119,7 @@ function RecentInvoices({
                 </span>
                 <span className={styles.invoiceAmount}>
                   <strong className={styles.mono}>
-                    {invoice.exactAmountZec} ZEC
+                    {invoice.exactAmountZec} TAZ
                   </strong>
                   <span
                     className={`${styles.status} ${styles[`status_${invoice.status}`]}`}
@@ -151,10 +151,30 @@ export function MerchantInvoiceForm({
   const idPrefix = useId();
   const [values, setValues] = useState(initialValues);
   const [clientErrors, setClientErrors] = useState<MerchantFormErrors>({});
+  const [ignoredAddressValidation, setIgnoredAddressValidation] = useState<
+    string | undefined
+  >();
+  const [dismissedFieldErrors, setDismissedFieldErrors] =
+    useState<MerchantFormErrors>({});
 
   const isSubmitting = submission.status === "submitting";
-  const getError = (field: MerchantFormField) =>
-    fieldErrors?.[field] ?? clientErrors[field];
+  const addressValidationKey = [
+    addressValidation.status,
+    "message" in addressValidation ? addressValidation.message : "",
+  ].join(":");
+  const currentAddressValidation =
+    ignoredAddressValidation === addressValidationKey
+      ? ({ status: "idle" } as const)
+      : addressValidation;
+  const getError = (field: MerchantFormField) => {
+    const suppliedError = fieldErrors?.[field];
+    const activeSuppliedError =
+      suppliedError && dismissedFieldErrors[field] !== suppliedError
+        ? suppliedError
+        : undefined;
+
+    return activeSuppliedError ?? clientErrors[field];
+  };
 
   function updateValue(
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -163,6 +183,16 @@ export function MerchantInvoiceForm({
     const value = event.target.value;
 
     setValues((current) => ({ ...current, [field]: value }));
+    if (field === "recipientAddress") {
+      setIgnoredAddressValidation(addressValidationKey);
+    }
+    const suppliedError = fieldErrors?.[field];
+    if (suppliedError) {
+      setDismissedFieldErrors((current) => ({
+        ...current,
+        [field]: suppliedError,
+      }));
+    }
     setClientErrors((current) => {
       if (!current[field]) return current;
       const next = { ...current };
@@ -182,8 +212,8 @@ export function MerchantInvoiceForm({
     };
     const nextErrors = validate(nextValues);
 
-    if (addressValidation.status === "invalid") {
-      nextErrors.recipientAddress = addressValidation.message;
+    if (currentAddressValidation.status === "invalid") {
+      nextErrors.recipientAddress = currentAddressValidation.message;
     }
 
     setClientErrors(nextErrors);
@@ -196,7 +226,7 @@ export function MerchantInvoiceForm({
   const addressStatusId = `${idPrefix}-address-status`;
   const addressDescription = [
     `${idPrefix}-address-hint`,
-    addressError || addressValidation.status !== "idle"
+    addressError || currentAddressValidation.status !== "idle"
       ? addressStatusId
       : undefined,
   ]
@@ -251,11 +281,11 @@ export function MerchantInvoiceForm({
               />
               <div
                 className={`${styles.fieldMessage} ${
-                  addressError || addressValidation.status === "invalid"
+                  addressError || currentAddressValidation.status === "invalid"
                     ? styles.messageError
-                    : addressValidation.status === "valid"
+                    : currentAddressValidation.status === "valid"
                       ? styles.messageSuccess
-                      : addressValidation.status === "unavailable"
+                      : currentAddressValidation.status === "unavailable"
                         ? styles.messageInfo
                         : ""
                 }`}
@@ -264,16 +294,16 @@ export function MerchantInvoiceForm({
               >
                 {addressError ? (
                   addressError
-                ) : addressValidation.status === "checking" ? (
-                  (addressValidation.message ??
+                ) : currentAddressValidation.status === "checking" ? (
+                  (currentAddressValidation.message ??
                   "Checking this Testnet address…")
-                ) : addressValidation.status === "valid" ? (
-                  (addressValidation.message ?? "Address looks good.")
-                ) : addressValidation.status === "invalid" ? (
-                  addressValidation.message
-                ) : addressValidation.status === "unavailable" ? (
+                ) : currentAddressValidation.status === "valid" ? (
+                  (currentAddressValidation.message ?? "Address looks good.")
+                ) : currentAddressValidation.status === "invalid" ? (
+                  currentAddressValidation.message
+                ) : currentAddressValidation.status === "unavailable" ? (
                   <>
-                    <span>{addressValidation.message}</span>
+                    <span>{currentAddressValidation.message}</span>
                     {onAddressBlur ? (
                       <button
                         className={styles.inlineButton}
@@ -293,7 +323,7 @@ export function MerchantInvoiceForm({
             <div className={styles.field}>
               <div className={styles.labelRow}>
                 <label htmlFor={`${idPrefix}-amount`}>Amount</label>
-                <span>ZEC</span>
+                <span>TAZ</span>
               </div>
               <p className={styles.hint} id={`${idPrefix}-amount-hint`}>
                 Enter a positive amount with up to eight decimal places.
@@ -312,7 +342,7 @@ export function MerchantInvoiceForm({
                   type="text"
                   value={values.amountZec}
                 />
-                <span aria-hidden>ZEC</span>
+                <span aria-hidden>TAZ</span>
               </div>
               <p
                 className={`${styles.fieldMessage} ${styles.messageError}`}
@@ -488,8 +518,9 @@ export function MerchantInvoiceForm({
             <div className={styles.testnetNotice}>
               <strong>Zcash Testnet only</strong>
               <p>
-                Use test ZEC. Transparent addresses and amounts are publicly
-                visible; shielded and Unified recipients are outside this MVP.
+                Use TAZ, which has no real monetary value. Transparent addresses
+                and amounts are publicly visible; shielded and Unified
+                recipients are outside this MVP.
               </p>
             </div>
           </aside>
