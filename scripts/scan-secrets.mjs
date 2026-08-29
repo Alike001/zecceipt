@@ -26,7 +26,8 @@ const signatures = [
   },
   {
     name: "populated database credential",
-    pattern: /(?:DATABASE_URL|SUPABASE_SERVICE_ROLE_KEY)\s*=\s*[^\s#]+/,
+    pattern:
+      /(?:DATABASE_URL|INVOICE_MANAGEMENT_SECRET|SUPABASE_SERVICE_ROLE_KEY)\s*=\s*[^\s#]+/,
   },
   {
     name: "private key block",
