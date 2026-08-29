@@ -19,6 +19,8 @@ describe("Home", () => {
     expect(
       screen.getAllByRole("link", { name: /create (an )?invoice/i }),
     ).toHaveLength(3);
+    expect(screen.getByText("0.04200137 TAZ")).toBeInTheDocument();
+    expect(screen.queryByText("0.04200137 ZEC")).not.toBeInTheDocument();
   });
 
   it("renders an honest loading slot instead of a hard-coded block height", () => {

@@ -9,6 +9,8 @@ Zecceipt is a merchant payment-confirmation tool, not a wallet, exchange, or blo
 
 The product must always say **Zcash Testnet** and **transparent recipient** where ambiguity could make someone believe real ZEC or shielded-recipient confirmation is supported.
 
+Visible Testnet amount labels use **TAZ**, the valueless Testnet currency code. Existing shared fields such as `amountZec` remain stable because they represent a decimal amount in Zcash base units; contributor components must render those values as TAZ whenever `network` is `testnet`.
+
 ## Concept references
 
 - [`landing.png`](./concepts/landing.png): page hierarchy, alternating bands, product preview, evidence and privacy explanation.
@@ -57,6 +59,7 @@ The types intentionally keep amounts as decimal strings or integer-zatoshi strin
 ## Copy and state rules
 
 - Say “Create an invoice” or “Create a payment request,” not “Connect wallet.”
+- Label Testnet payment amounts as “TAZ,” with helper copy explaining that TAZ has no real monetary value.
 - Say “Payment received” only for `paid` or `overpaid` data supplied by the verifier.
 - Say “Verification paused” for RPC outages; never imply that funds are missing.
 - Show full copy access for every address and transaction ID, even when a fingerprint is displayed.
