@@ -47,6 +47,7 @@ describe("CheckoutPaymentSummary", () => {
 
     // Exact amount and zatoshis
     expect(screen.getByText(/0.25000000/)).toBeInTheDocument();
+    expect(screen.getByText("TAZ")).toBeInTheDocument();
     expect(screen.getByText("25,000,000 zatoshis")).toBeInTheDocument();
 
     // Recipient address and fingerprint
@@ -150,7 +151,7 @@ describe("CheckoutPaymentSummary", () => {
     );
 
     const copyAmountBtn = screen.getByRole("button", {
-      name: `Copy amount ${mockRequest.exactAmountZec} ZEC`,
+      name: `Copy amount ${mockRequest.exactAmountZec} TAZ`,
     });
     fireEvent.click(copyAmountBtn);
 
@@ -159,6 +160,38 @@ describe("CheckoutPaymentSummary", () => {
         mockRequest.exactAmountZec,
       );
       expect(onCopyAmount).toHaveBeenCalledWith(mockRequest.exactAmountZec);
+    });
+  });
+
+  it("reports a copy failure without claiming success or invoking the handler twice", async () => {
+    vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(
+      new Error("Clipboard permission denied"),
+    );
+    const onCopyAddress = vi
+      .fn()
+      .mockRejectedValue(new Error("No fallback available"));
+
+    render(
+      <CheckoutPaymentSummary
+        view={{ status: "ready", request: mockRequest }}
+        onCopyAddress={onCopyAddress}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Copy address ${mockRequest.recipientAddress}`,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(onCopyAddress).toHaveBeenCalledTimes(1);
+      expect(
+        screen.getByText(
+          "Unable to copy the merchant address. Select and copy it manually.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("✓ Copied")).not.toBeInTheDocument();
     });
   });
 

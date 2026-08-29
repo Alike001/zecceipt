@@ -14,6 +14,32 @@ function formatSeconds(totalSeconds: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
+type CopyHandler = (value: string) => void | Promise<void>;
+
+async function copyValue(value: string, onCopy?: CopyHandler) {
+  let copied = false;
+
+  try {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      copied = true;
+    }
+  } catch {
+    // The optional handler below can provide a browser-specific fallback.
+  }
+
+  if (onCopy) {
+    try {
+      await onCopy(value);
+      copied = true;
+    } catch {
+      // A successful Clipboard API write remains successful even if this hook fails.
+    }
+  }
+
+  return copied;
+}
+
 export function CheckoutPaymentSummary({
   view,
   qrCode,
@@ -54,41 +80,33 @@ export function CheckoutPaymentSummary({
 
   // Handle Copy Address
   const handleCopyAddress = async (address: string) => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(address);
-      }
+    const copied = await copyValue(address, onCopyAddress);
+
+    if (copied) {
       setCopiedAddress(true);
       setScreenReaderAnnouncement("Copied merchant address to clipboard.");
-      if (onCopyAddress) {
-        await onCopyAddress(address);
-      }
       setTimeout(() => setCopiedAddress(false), 2000);
-    } catch {
-      // Fallback
-      if (onCopyAddress) {
-        await onCopyAddress(address);
-      }
+    } else {
+      setCopiedAddress(false);
+      setScreenReaderAnnouncement(
+        "Unable to copy the merchant address. Select and copy it manually.",
+      );
     }
   };
 
   // Handle Copy Amount
   const handleCopyAmount = async (amount: string) => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(amount);
-      }
+    const copied = await copyValue(amount, onCopyAmount);
+
+    if (copied) {
       setCopiedAmount(true);
-      setScreenReaderAnnouncement(`Copied ${amount} ZEC amount to clipboard.`);
-      if (onCopyAmount) {
-        await onCopyAmount(amount);
-      }
+      setScreenReaderAnnouncement(`Copied ${amount} TAZ amount to clipboard.`);
       setTimeout(() => setCopiedAmount(false), 2000);
-    } catch {
-      // Fallback
-      if (onCopyAmount) {
-        await onCopyAmount(amount);
-      }
+    } else {
+      setCopiedAmount(false);
+      setScreenReaderAnnouncement(
+        "Unable to copy the TAZ amount. Select and copy it manually.",
+      );
     }
   };
 
@@ -198,13 +216,13 @@ export function CheckoutPaymentSummary({
             <div className={styles.amountRow}>
               <span className={styles.amountMain}>
                 {request.exactAmountZec}{" "}
-                <span className={styles.amountUnit}>ZEC</span>
+                <span className={styles.amountUnit}>TAZ</span>
               </span>
               <button
                 type="button"
                 className={styles.copyButton}
                 onClick={() => handleCopyAmount(request.exactAmountZec)}
-                aria-label={`Copy amount ${request.exactAmountZec} ZEC`}
+                aria-label={`Copy amount ${request.exactAmountZec} TAZ`}
                 data-copied={copiedAmount}
               >
                 {copiedAmount ? "✓ Copied" : "Copy Amount"}
@@ -298,9 +316,10 @@ export function CheckoutPaymentSummary({
           ℹ️
         </span>
         <span>
-          <strong>Testnet Only:</strong> Send exact transparent ZEC from your
-          Testnet wallet. This MVP confirms payments made to transparent
-          addresses only. Do not send real Mainnet ZEC.
+          <strong>Testnet Only:</strong> Send exact transparent TAZ from your
+          Testnet wallet. TAZ has no real monetary value. This MVP confirms
+          payments made to transparent addresses only. Do not send real Mainnet
+          ZEC.
         </span>
       </div>
     </section>
