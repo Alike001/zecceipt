@@ -233,9 +233,12 @@ RPC calls, and PostgreSQL. A static export is not supported.
 2. Add the three variables from `.env.example` to the hosting provider's secret
    or environment-variable settings. Do not commit `.env.local`, paste values
    into build logs, or rename them with `NEXT_PUBLIC_`.
-3. Run `npm ci` and `npm run db:migrate` with `DATABASE_URL` available to the
-   migration process.
-4. Build with `npm run build`.
+3. Run `npm ci` with `DATABASE_URL` available to the migration process. Vercel
+   automatically runs `npm run vercel-build`, which applies the idempotent
+   migrations before `next build`. On another host, run `npm run db:migrate`
+   and then `npm run build` explicitly.
+4. Confirm the build completes without printing any environment-variable
+   values.
 5. Start the production server with `npm run start`.
 6. After deployment, request `/api/network` and confirm it says `testnet` before
    creating an invoice.

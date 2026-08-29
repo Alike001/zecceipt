@@ -74,7 +74,7 @@ export function LandingPage({ network }: LandingPageProps) {
 
         <section className="hero shell" aria-labelledby="hero-title">
           <div className="hero__copy">
-            <h1 id="hero-title">Know when the ZEC arrives.</h1>
+            <h1 id="hero-title">Know when the TAZ arrives.</h1>
             <p>
               Create a Testnet payment request. Zecceipt watches the transparent
               output, waits for confirmation, and turns it into a receipt.
@@ -118,7 +118,7 @@ export function LandingPage({ network }: LandingPageProps) {
                 aria-label="Invoice QR placement preview"
               >
                 <span aria-hidden="true" />
-                <small>QR generated per invoice</small>
+                <small>Preview only · Real QR generated per invoice</small>
               </div>
             </div>
             <div className="invoice-preview__network">

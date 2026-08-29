@@ -28,7 +28,7 @@ describe("Home", () => {
     expect(
       screen.getByRole("heading", {
         level: 1,
-        name: "Know when the ZEC arrives.",
+        name: "Know when the TAZ arrives.",
       }),
     ).toBeInTheDocument();
     expect(
@@ -38,6 +38,9 @@ describe("Home", () => {
       screen.getAllByRole("link", { name: /create (an )?invoice/i }),
     ).toHaveLength(3);
     expect(screen.getByText("Generated per invoice")).toBeInTheDocument();
+    expect(
+      screen.getByText("Preview only · Real QR generated per invoice"),
+    ).toBeInTheDocument();
     expect(screen.queryByText("0.04200137 ZEC")).not.toBeInTheDocument();
   });
 
