@@ -1,0 +1,395 @@
+.checkoutSummary {
+  position: relative;
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+  border: 1px solid var(--color-line-on-ink, #31332f);
+  border-radius: 0.65rem;
+  background: linear-gradient(145deg, #0f100f 0%, #151714 100%);
+  color: var(--color-text-on-ink, #f7f6f0);
+  box-shadow: 0 1.75rem 5rem rgba(0, 0, 0, 0.4);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* Receipt side notches */
+.checkoutSummary::before,
+.checkoutSummary::after {
+  position: absolute;
+  top: 48%;
+  width: 0.9rem;
+  height: 1.8rem;
+  border: 1px solid var(--color-line-on-ink, #31332f);
+  background: var(--color-ink, #0b0c0b);
+  content: "";
+  z-index: 2;
+}
+
+.checkoutSummary::before {
+  left: -1px;
+  border-left: 0;
+  border-radius: 0 1rem 1rem 0;
+}
+
+.checkoutSummary::after {
+  right: -1px;
+  border-right: 0;
+  border-radius: 1rem 0 0 1rem;
+}
+
+/* Header bar */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-line-on-ink, #31332f);
+  background: rgba(255, 255, 255, 0.02);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.invoiceLabel {
+  color: var(--color-text-on-ink, #f7f6f0);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expiryBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-line-on-ink, #31332f);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-zec, #f4b728);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.expiryBadge[data-urgent="true"] {
+  border-color: rgba(244, 183, 40, 0.4);
+  background: rgba(244, 183, 40, 0.1);
+}
+
+.expiryBadge[data-expired="true"] {
+  border-color: rgba(255, 108, 108, 0.4);
+  background: rgba(255, 108, 108, 0.1);
+  color: #ff8888;
+}
+
+/* Main body split layout */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(13rem, 0.85fr);
+  gap: 2rem;
+  padding: 1.75rem;
+  align-items: center;
+}
+
+/* Amount block */
+.amountSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.dataLabel {
+  display: block;
+  color: var(--color-muted-on-ink, #a8aaa2);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.amountRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.amountMain {
+  font-family: var(--font-mono, monospace);
+  font-size: clamp(1.65rem, 3.5vw, 2.35rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--color-text-on-ink, #f7f6f0);
+}
+
+.amountUnit {
+  color: var(--color-zec, #f4b728);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.amountZats {
+  color: var(--color-muted-on-ink, #a8aaa2);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+}
+
+/* Recipient address block */
+.addressSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.addressHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.fingerprintBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--color-line-on-ink, #31332f);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-muted-on-ink, #a8aaa2);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.65rem;
+}
+
+.addressBox {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--color-line-on-ink, #31332f);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.fullAddress {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--color-text-on-ink, #f7f6f0);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+/* Copy buttons */
+.copyButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--color-line-on-ink, #31332f);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-on-ink, #f7f6f0);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 160ms ease;
+}
+
+.copyButton:hover {
+  border-color: var(--color-zec, #f4b728);
+  background: rgba(244, 183, 40, 0.1);
+  color: var(--color-zec, #f4b728);
+}
+
+.copyButton:focus-visible {
+  outline: 3px solid var(--color-info, #6ca5ff);
+  outline-offset: 2px;
+}
+
+.copyButton[data-copied="true"] {
+  border-color: var(--color-success, #4f9c52);
+  background: rgba(79, 156, 82, 0.15);
+  color: #76bf72;
+}
+
+/* QR Side */
+.qrColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.qrContainer {
+  display: inline-flex;
+  padding: 0.65rem;
+  border-radius: 0.6rem;
+  background: var(--color-paper, #f5f3ec);
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.3);
+}
+
+.walletLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+  color: var(--color-zec, #f4b728);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 160ms ease;
+}
+
+.walletLink:hover {
+  color: var(--color-zec-strong, #ffc43d);
+}
+
+/* Warnings and Metadata Footers */
+.metaFooter {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  border-top: 1px solid var(--color-line-on-ink, #31332f);
+  background: rgba(0, 0, 0, 0.2);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.85rem 1.5rem;
+}
+
+.metaItem + .metaItem {
+  border-left: 1px solid var(--color-line-on-ink, #31332f);
+}
+
+.metaItem small {
+  color: var(--color-muted-on-ink, #a8aaa2);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+}
+
+.warningBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.85rem 1.5rem;
+  border-top: 1px solid var(--color-line-on-ink, #31332f);
+  background: rgba(244, 183, 40, 0.05);
+  color: var(--color-muted-on-ink, #a8aaa2);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.warningIcon {
+  color: var(--color-zec, #f4b728);
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+/* Loading Skeleton State */
+.skeletonCard {
+  padding: 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.skeletonLine {
+  height: 1.25rem;
+  border-radius: 0.35rem;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Unavailable State */
+.unavailableCard {
+  padding: 2.5rem 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.unavailableTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--color-info, #6ca5ff);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.unavailableMessage {
+  max-width: 32rem;
+  color: var(--color-muted-on-ink, #a8aaa2);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 48rem) {
+  .body {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+
+  .metaFooter {
+    grid-template-columns: 1fr;
+  }
+
+  .metaItem + .metaItem {
+    border-left: none;
+    border-top: 1px solid var(--color-line-on-ink, #31332f);
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .expiryBadge {
+    align-self: flex-start;
+  }
+
+  .addressBox {
+    grid-template-columns: 1fr;
+  }
+
+  .copyButton {
+    width: 100%;
+  }
+}
