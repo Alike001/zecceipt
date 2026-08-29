@@ -24,6 +24,7 @@ export interface InvoiceRecord {
   confirmationTarget: number;
   status: PersistedInvoiceStatus;
   receivedZatoshis: bigint;
+  lastCheckedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,6 +52,24 @@ export interface NewPaymentOutput {
   observedAt: string;
 }
 
+export interface PaymentOutputRecord extends NewPaymentOutput {
+  firstSeenAt: string;
+  lastSeenAt: string;
+}
+
+export interface ReconcileInvoicePaymentInput {
+  invoiceId: string;
+  outputs: readonly Omit<NewPaymentOutput, "invoiceId" | "observedAt">[];
+  status: PersistedInvoiceStatus;
+  receivedZatoshis: bigint;
+  observedAt: string;
+}
+
+export interface ReconciledInvoicePayment {
+  invoice: InvoiceRecord;
+  outputs: readonly PaymentOutputRecord[];
+}
+
 interface InvoiceRow extends Record<string, unknown> {
   id: string;
   management_token_hash: string;
@@ -64,8 +83,21 @@ interface InvoiceRow extends Record<string, unknown> {
   confirmation_target: number;
   status: PersistedInvoiceStatus;
   received_zats: string | number | bigint;
+  last_checked_at: string | Date | null;
   created_at: string | Date;
   updated_at: string | Date;
+}
+
+interface PaymentOutputRow extends Record<string, unknown> {
+  invoice_id: string;
+  txid: string;
+  output_index: number;
+  value_zats: string | number | bigint;
+  block_height: number;
+  block_hash: string;
+  confirmations: number;
+  first_seen_at: string | Date;
+  last_seen_at: string | Date;
 }
 
 export class InvoiceAmountCodesExhaustedError extends Error {
@@ -102,8 +134,25 @@ function mapInvoice(row: InvoiceRow): InvoiceRecord {
     confirmationTarget: row.confirmation_target,
     status: row.status,
     receivedZatoshis: BigInt(row.received_zats),
+    lastCheckedAt:
+      row.last_checked_at === null ? null : toIsoDateTime(row.last_checked_at),
     createdAt: toIsoDateTime(row.created_at),
     updatedAt: toIsoDateTime(row.updated_at),
+  };
+}
+
+function mapPaymentOutput(row: PaymentOutputRow): PaymentOutputRecord {
+  return {
+    invoiceId: row.invoice_id,
+    txid: row.txid,
+    outputIndex: row.output_index,
+    valueZatoshis: BigInt(row.value_zats),
+    blockHeight: row.block_height,
+    blockHash: row.block_hash,
+    confirmations: row.confirmations,
+    observedAt: toIsoDateTime(row.last_seen_at),
+    firstSeenAt: toIsoDateTime(row.first_seen_at),
+    lastSeenAt: toIsoDateTime(row.last_seen_at),
   };
 }
 
@@ -120,9 +169,91 @@ const invoiceColumns = `
   confirmation_target,
   status,
   received_zats,
+  last_checked_at,
   created_at,
   updated_at
 `;
+
+const paymentOutputColumns = `
+  invoice_id,
+  txid,
+  output_index,
+  value_zats,
+  block_height,
+  block_hash,
+  confirmations,
+  first_seen_at,
+  last_seen_at
+`;
+
+async function findPaymentOutputs(
+  executor: DatabaseTransaction,
+  invoiceId: string,
+): Promise<readonly PaymentOutputRecord[]> {
+  const rows = await executor.query<PaymentOutputRow>(
+    `
+      SELECT ${paymentOutputColumns}
+      FROM payment_outputs
+      WHERE invoice_id = $1
+      ORDER BY block_height, txid, output_index
+    `,
+    [invoiceId],
+  );
+  return rows.map(mapPaymentOutput);
+}
+
+async function upsertPaymentOutput(
+  executor: DatabaseTransaction,
+  input: NewPaymentOutput,
+): Promise<void> {
+  const rows = await executor.query<{ invoice_id: string }>(
+    `
+      INSERT INTO payment_outputs (
+        invoice_id,
+        txid,
+        output_index,
+        value_zats,
+        block_height,
+        block_hash,
+        confirmations,
+        first_seen_at,
+        last_seen_at
+      ) VALUES (
+        $1,
+        $2,
+        $3,
+        $4::bigint,
+        $5,
+        $6,
+        $7,
+        $8::timestamptz,
+        $8::timestamptz
+      )
+      ON CONFLICT (txid, output_index) DO UPDATE SET
+        value_zats = EXCLUDED.value_zats,
+        block_height = EXCLUDED.block_height,
+        block_hash = EXCLUDED.block_hash,
+        confirmations = EXCLUDED.confirmations,
+        last_seen_at = EXCLUDED.last_seen_at
+      WHERE payment_outputs.invoice_id = EXCLUDED.invoice_id
+      RETURNING invoice_id
+    `,
+    [
+      input.invoiceId,
+      input.txid,
+      input.outputIndex,
+      input.valueZatoshis,
+      input.blockHeight,
+      input.blockHash,
+      input.confirmations,
+      input.observedAt,
+    ],
+  );
+
+  if (!rows[0]) {
+    throw new PaymentOutputAlreadyAssignedError();
+  }
+}
 
 export class InvoiceRepository {
   constructor(private readonly database: Database) {}
@@ -206,53 +337,93 @@ export class InvoiceRepository {
   }
 
   async recordPaymentOutput(input: NewPaymentOutput): Promise<void> {
-    const rows = await this.database.query<{ invoice_id: string }>(
-      `
-        INSERT INTO payment_outputs (
-          invoice_id,
-          txid,
-          output_index,
-          value_zats,
-          block_height,
-          block_hash,
-          confirmations,
-          first_seen_at,
-          last_seen_at
-        ) VALUES (
-          $1,
-          $2,
-          $3,
-          $4::bigint,
-          $5,
-          $6,
-          $7,
-          $8::timestamptz,
-          $8::timestamptz
-        )
-        ON CONFLICT (txid, output_index) DO UPDATE SET
-          value_zats = EXCLUDED.value_zats,
-          block_height = EXCLUDED.block_height,
-          block_hash = EXCLUDED.block_hash,
-          confirmations = EXCLUDED.confirmations,
-          last_seen_at = EXCLUDED.last_seen_at
-        WHERE payment_outputs.invoice_id = EXCLUDED.invoice_id
-        RETURNING invoice_id
-      `,
-      [
-        input.invoiceId,
-        input.txid,
-        input.outputIndex,
-        input.valueZatoshis,
-        input.blockHeight,
-        input.blockHash,
-        input.confirmations,
-        input.observedAt,
-      ],
-    );
+    await upsertPaymentOutput(this.database, input);
+  }
 
-    if (!rows[0]) {
-      throw new PaymentOutputAlreadyAssignedError();
-    }
+  findPaymentOutputsByInvoiceId(
+    invoiceId: string,
+  ): Promise<readonly PaymentOutputRecord[]> {
+    return findPaymentOutputs(this.database, invoiceId);
+  }
+
+  async reconcilePaymentOutputs(
+    input: ReconcileInvoicePaymentInput,
+  ): Promise<ReconciledInvoicePayment | null> {
+    return this.database.transaction(async (transaction) => {
+      const invoiceRows = await transaction.query<InvoiceRow>(
+        `SELECT ${invoiceColumns} FROM invoices WHERE id = $1 FOR UPDATE`,
+        [input.invoiceId],
+      );
+      const currentRow = invoiceRows[0];
+      if (!currentRow) return null;
+
+      const current = mapInvoice(currentRow);
+      if (
+        current.lastCheckedAt !== null &&
+        Date.parse(current.lastCheckedAt) > Date.parse(input.observedAt)
+      ) {
+        return {
+          invoice: current,
+          outputs: await findPaymentOutputs(transaction, input.invoiceId),
+        };
+      }
+
+      for (const output of input.outputs) {
+        await upsertPaymentOutput(transaction, {
+          invoiceId: input.invoiceId,
+          ...output,
+          observedAt: input.observedAt,
+        });
+      }
+
+      if (input.outputs.length === 0) {
+        await transaction.query(
+          `DELETE FROM payment_outputs WHERE invoice_id = $1`,
+          [input.invoiceId],
+        );
+      } else {
+        const identityClauses = input.outputs.map(
+          (_, index) =>
+            `(txid = $${index * 2 + 2} AND output_index = $${index * 2 + 3})`,
+        );
+        const identityParameters = input.outputs.flatMap((output) => [
+          output.txid,
+          output.outputIndex,
+        ]);
+        await transaction.query(
+          `
+            DELETE FROM payment_outputs
+            WHERE invoice_id = $1
+              AND NOT (${identityClauses.join(" OR ")})
+          `,
+          [input.invoiceId, ...identityParameters],
+        );
+      }
+
+      const updatedRows = await transaction.query<InvoiceRow>(
+        `
+          UPDATE invoices
+          SET
+            status = $2,
+            received_zats = $3::bigint,
+            last_checked_at = $4::timestamptz,
+            updated_at = $4::timestamptz
+          WHERE id = $1
+          RETURNING ${invoiceColumns}
+        `,
+        [
+          input.invoiceId,
+          input.status,
+          input.receivedZatoshis,
+          input.observedAt,
+        ],
+      );
+
+      return {
+        invoice: mapInvoice(updatedRows[0]),
+        outputs: await findPaymentOutputs(transaction, input.invoiceId),
+      };
+    });
   }
 
   transaction<Result>(
