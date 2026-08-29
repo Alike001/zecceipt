@@ -15,7 +15,7 @@ const steps = [
   },
   {
     title: "Customer pays",
-    body: "Your customer sends the exact test ZEC shown on the checkout.",
+    body: "Your customer sends the exact TAZ shown on the Testnet checkout.",
   },
   {
     title: "Zecceipt verifies",
@@ -85,7 +85,7 @@ export function LandingPage({ network }: LandingPageProps) {
               <div>
                 <span className="data-label">Exact amount</span>
                 <strong className="invoice-preview__amount mono">
-                  0.04200137 ZEC
+                  0.04200137 TAZ
                 </strong>
                 <span className="data-label">
                   Transparent address · Testnet

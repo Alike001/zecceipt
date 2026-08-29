@@ -1,0 +1,9 @@
+{
+  "chain": "test",
+  "blocks": 4310128,
+  "headers": 4310128,
+  "estimatedheight": 4310129,
+  "verificationprogress": 0.9999997679883827,
+  "bestblockhash": "0000000000000000000000000000000000000000000000000000000000000001",
+  "difficulty": 27174873.271
+}

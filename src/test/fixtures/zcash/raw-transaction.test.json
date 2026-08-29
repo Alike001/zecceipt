@@ -1,0 +1,16 @@
+{
+  "txid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "blockhash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "height": 481688,
+  "confirmations": 12,
+  "vout": [
+    {
+      "n": 0,
+      "valueZat": 1000010000,
+      "scriptPubKey": {
+        "type": "pubkeyhash",
+        "addresses": ["tmTestOnlySanitizedFixtureAddress"]
+      }
+    }
+  ]
+}
