@@ -34,6 +34,7 @@ export interface CreateInvoiceResponse {
     expiresAt: string;
     confirmationTarget: number;
     network: "testnet";
+    createdAt: string;
   };
   merchantManagement: {
     invoiceId: string;
@@ -252,6 +253,7 @@ export async function createInvoice(
         expiresAt: invoice.expiresAt,
         confirmationTarget: invoice.confirmationTarget,
         network: "testnet",
+        createdAt: invoice.createdAt,
       },
       merchantManagement: {
         invoiceId,

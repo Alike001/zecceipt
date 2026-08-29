@@ -407,7 +407,12 @@ export class InvoiceRepository {
             status = $2,
             received_zats = $3::bigint,
             last_checked_at = $4::timestamptz,
-            updated_at = $4::timestamptz
+            updated_at = CASE
+              WHEN invoices.status IS DISTINCT FROM $2
+                OR invoices.received_zats IS DISTINCT FROM $3::bigint
+              THEN $4::timestamptz
+              ELSE invoices.updated_at
+            END
           WHERE id = $1
           RETURNING ${invoiceColumns}
         `,

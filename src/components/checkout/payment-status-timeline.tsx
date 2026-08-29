@@ -153,7 +153,7 @@ export function PaymentStatusTimeline({
             </div>
             <p className={styles.stateCardDescription}>
               Expected amount: <strong>{view.expectedAmountZec} TAZ</strong>.
-              Zecceipt checks the mempool and newly mined blocks continuously.
+              Zecceipt checks newly mined blocks at regular intervals.
             </p>
           </div>
         );
@@ -199,8 +199,8 @@ export function PaymentStatusTimeline({
             </div>
             <p className={styles.stateCardDescription}>
               Payment of <strong>{view.receivedAmountZec} TAZ</strong> has been
-              detected in block height. Waiting for block confirmations to
-              guarantee settlement finality.
+              detected in block height. Waiting for block confirmations to reach
+              the selected confirmation target.
             </p>
             <div className={styles.progressContainer}>
               <div className={styles.progressHeader}>

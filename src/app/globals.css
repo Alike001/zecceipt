@@ -79,6 +79,29 @@ p {
   line-height: 1.65;
 }
 
+.not-found-panel {
+  display: grid;
+  width: min(100% - (var(--gutter) * 2), 40rem);
+  min-height: 65svh;
+  margin-inline: auto;
+  padding-block: clamp(5rem, 12vw, 9rem);
+  align-content: center;
+  justify-items: start;
+  gap: 1.25rem;
+}
+
+.not-found-panel h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 7vw, 5rem);
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+}
+
+.not-found-panel p {
+  max-width: 34rem;
+  color: var(--color-muted);
+}
+
 .shell {
   width: min(100%, calc(var(--content-width) + (var(--gutter) * 2)));
   margin-inline: auto;
