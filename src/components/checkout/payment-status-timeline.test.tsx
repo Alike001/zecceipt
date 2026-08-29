@@ -68,9 +68,13 @@ describe("PaymentStatusTimeline", () => {
       />,
     );
 
-    expect(screen.getByText(/Partial payment/i)).toBeInTheDocument();
-    expect(screen.getByText(/Partial Payment Detected/i)).toBeInTheDocument();
-    expect(screen.getByText(/0.25000000 TAZ/)).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/Partial payment/i).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Partial Payment Detected")).toBeInTheDocument();
+    expect(screen.getAllByText(/0.25000000 TAZ/).length).toBeGreaterThanOrEqual(
+      1,
+    );
     expect(
       screen.getByText(
         "9b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c",

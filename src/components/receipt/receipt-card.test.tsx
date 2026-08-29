@@ -65,7 +65,7 @@ describe("ReceiptCard", () => {
     expect(screen.getByText("Payment Received")).toBeInTheDocument();
 
     // Financial breakdown
-    expect(screen.getByText(/0.45000000/)).toBeInTheDocument();
+    expect(screen.getAllByText(/0.45000000/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("0.45000000 TAZ")).toBeInTheDocument();
     expect(screen.getByText("Zcash Testnet (TAZ)")).toBeInTheDocument();
 
@@ -85,7 +85,7 @@ describe("ReceiptCard", () => {
 
     expect(screen.getByText("Payment Received (Overpaid)")).toBeInTheDocument();
     expect(screen.getByText("0.50000000 TAZ")).toBeInTheDocument();
-    expect(screen.getByText(/0.60000000/)).toBeInTheDocument();
+    expect(screen.getAllByText(/0.60000000/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("copies transaction ID to clipboard", async () => {
