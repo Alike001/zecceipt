@@ -1,0 +1,322 @@
+.receiptCard {
+  position: relative;
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+  border: 1px solid var(--color-line-on-ink, #31332f);
+  border-radius: 0.65rem;
+  background: var(--color-ink-soft, #131512);
+  color: var(--color-text-on-ink, #f7f6f0);
+  box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+/* Receipt perforated top/bottom decorations */
+.receiptHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.75rem;
+  border-bottom: 1px dashed var(--color-line-on-ink, #31332f);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.brandReceipt {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--color-zec, #f4b728);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.brandReceipt span {
+  color: var(--color-text-on-ink, #f7f6f0);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  background: rgba(79, 156, 82, 0.15);
+  border: 1px solid rgba(79, 156, 82, 0.4);
+  color: #76bf72;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.receiptBody {
+  padding: 2rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Invoice Label & Amount Headline */
+.summaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding-bottom: 1.75rem;
+  border-bottom: 1px solid var(--color-line-on-ink, #31332f);
+}
+
+.invoiceMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.invoiceTitle {
+  font-family: var(--font-display, sans-serif);
+  font-size: clamp(1.4rem, 2.5vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--color-text-on-ink, #f7f6f0);
+}
+
+.invoiceSubtitle {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  color: var(--color-muted-on-ink, #a8aaa2);
+}
+
+.amountBox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.amountLabel {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  color: var(--color-muted-on-ink, #a8aaa2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.amountPaid {
+  font-family: var(--font-mono, monospace);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 700;
+  color: #76bf72;
+  letter-spacing: -0.04em;
+}
+
+/* Evidence Table / Key-Value Grid */
+.evidenceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-line-on-ink, #31332f);
+  background: rgba(0, 0, 0, 0.3);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+}
+
+.evidenceItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.evidenceLabel {
+  font-size: 0.65rem;
+  color: var(--color-muted-on-ink, #a8aaa2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.evidenceValue {
+  color: var(--color-text-on-ink, #f7f6f0);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* On-Chain Matched Outputs */
+.outputsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionHeading {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  color: var(--color-muted-on-ink, #a8aaa2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.outputCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--color-line-on-ink, #31332f);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.outputHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+}
+
+.txidWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.txidText {
+  color: var(--color-text-on-ink, #f7f6f0);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  font-size: 0.78rem;
+}
+
+.copyButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--color-line-on-ink, #31332f);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-on-ink, #f7f6f0);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 160ms ease;
+}
+
+.copyButton:hover {
+  border-color: var(--color-zec, #f4b728);
+  background: rgba(244, 183, 40, 0.1);
+  color: var(--color-zec, #f4b728);
+}
+
+.copyButton:focus-visible {
+  outline: 3px solid var(--color-info, #6ca5ff);
+  outline-offset: 2px;
+}
+
+.outputSpecs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-line-on-ink, #31332f);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+}
+
+/* Actions footer */
+.receiptFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.75rem;
+  border-top: 1px dashed var(--color-line-on-ink, #31332f);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.receiptActions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.55rem 1.15rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--color-line-on-ink, #31332f);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-on-ink, #f7f6f0);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.actionButton:hover {
+  border-color: var(--color-zec, #f4b728);
+  background: rgba(244, 183, 40, 0.1);
+  color: var(--color-zec, #f4b728);
+}
+
+.actionButtonPrimary {
+  background: var(--color-zec, #f4b728);
+  border-color: var(--color-zec, #f4b728);
+  color: #121310;
+}
+
+.actionButtonPrimary:hover {
+  background: var(--color-zec-strong, #ffc43d);
+  border-color: var(--color-zec-strong, #ffc43d);
+  color: #121310;
+}
+
+.testnetBadgeNotice {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  color: var(--color-muted-on-ink, #a8aaa2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 48rem) {
+  .summaryRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .amountBox {
+    align-items: flex-start;
+  }
+
+  .evidenceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .outputSpecs {
+    grid-template-columns: 1fr;
+  }
+
+  .receiptFooter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .receiptActions {
+    flex-direction: column;
+  }
+
+  .actionButton {
+    justify-content: center;
+  }
+}
