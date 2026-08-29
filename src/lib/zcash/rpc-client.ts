@@ -199,6 +199,13 @@ function parseRawTransaction(value: unknown): RawTransactionResult {
     throw malformedResult("getrawtransaction");
   }
 
+  if (
+    result.blocktime !== undefined &&
+    !isNonNegativeInteger(result.blocktime)
+  ) {
+    throw malformedResult("getrawtransaction");
+  }
+
   if (result.blockhash !== undefined && typeof result.blockhash !== "string") {
     throw malformedResult("getrawtransaction");
   }
@@ -210,6 +217,9 @@ function parseRawTransaction(value: unknown): RawTransactionResult {
       ? { confirmations: result.confirmations }
       : {}),
     ...(typeof result.height === "number" ? { height: result.height } : {}),
+    ...(typeof result.blocktime === "number"
+      ? { blocktime: result.blocktime }
+      : {}),
     ...(typeof result.blockhash === "string"
       ? { blockhash: result.blockhash }
       : {}),

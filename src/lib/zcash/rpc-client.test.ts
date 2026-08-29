@@ -84,6 +84,7 @@ describe("ZcashRpcClient", () => {
         addresses: ["tmTestOnlySanitizedFixtureAddress"],
       },
     });
+    expect(call.result.blocktime).toBe(1_788_005_040);
   });
 
   it("rejects malformed method results", async () => {

@@ -38,6 +38,7 @@ export interface RawTransactionResult {
   confirmations?: number;
   blockhash?: string;
   height?: number;
+  blocktime?: number;
   vout: readonly TransparentOutput[];
 }
 
