@@ -97,6 +97,7 @@ function rpcClient(input: {
   mempoolTransactions?: readonly RawTransactionResult[];
   blockHeight?: number;
   mempoolEnteredAt?: string;
+  mempoolEnteredAtByTxid?: Readonly<Record<string, string>>;
   mempoolRpcErrorTxids?: readonly string[];
   mempoolMalformedResponseTxids?: readonly string[];
   mempoolProviderErrorTxids?: readonly string[];
@@ -135,7 +136,9 @@ function rpcClient(input: {
             {
               time:
                 Date.parse(
-                  input.mempoolEnteredAt ?? "2026-08-29T12:04:00.000Z",
+                  input.mempoolEnteredAtByTxid?.[rawTransaction.txid] ??
+                    input.mempoolEnteredAt ??
+                    "2026-08-29T12:04:00.000Z",
                 ) / 1_000,
               height: blockHeight,
             },
@@ -430,6 +433,73 @@ describe("transparent payment verifier", () => {
         mempoolProviderErrorTxids: [unavailable.txid],
       }),
     );
+
+    expect(result.payment).toMatchObject({
+      status: "rpc_unavailable",
+      lastKnownStatus: "waiting",
+    });
+    expect(await repository.findById(invoice.id)).toMatchObject({
+      status: "waiting",
+      receivedZatoshis: 0n,
+    });
+  });
+
+  it("bounds the candidate scan and prioritizes the newest transaction", async () => {
+    const olderTransactions = Array.from({ length: 14 }, (_, index) =>
+      pendingTransaction({
+        txid: index.toString(16).padStart(64, "0"),
+        valueZatoshis: 5_000n,
+        address: otherAddress,
+      }),
+    );
+    const matching = pendingTransaction({
+      txid: "7".repeat(64),
+      valueZatoshis: invoice.expectedAmountZatoshis,
+    });
+    const mempoolEnteredAtByTxid = Object.fromEntries([
+      ...olderTransactions.map((rawTransaction, index) => [
+        rawTransaction.txid,
+        new Date(
+          Date.parse("2026-08-29T12:03:00.000Z") + index * 1_000,
+        ).toISOString(),
+      ]),
+      [matching.txid, "2026-08-29T12:04:00.000Z"],
+    ]);
+    const client = rpcClient({
+      mempoolTransactions: [...olderTransactions, matching],
+      mempoolEnteredAtByTxid,
+    });
+
+    const result = await verify(client);
+
+    expect(result.payment).toMatchObject({
+      status: "pending",
+      pendingOutput: { txid: matching.txid },
+    });
+    const candidateCalls = vi
+      .mocked(client.call)
+      .mock.calls.filter(([method]) => method === "getrawtransaction");
+    expect(candidateCalls).toHaveLength(12);
+    expect(candidateCalls[0]).toEqual([
+      "getrawtransaction",
+      [matching.txid, 1],
+    ]);
+  });
+
+  it("does not expire from a truncated post-expiry mempool scan", async () => {
+    const candidates = Array.from({ length: 13 }, (_, index) =>
+      pendingTransaction({
+        txid: (index + 20).toString(16).padStart(64, "0"),
+        valueZatoshis: 5_000n,
+        address: otherAddress,
+      }),
+    );
+
+    const result = await verifyInvoicePayment(invoice.id, {
+      rpcClient: rpcClient({ mempoolTransactions: candidates }),
+      invoiceRepository: repository,
+      now: () => new Date("2026-08-29T12:31:00.000Z"),
+    });
 
     expect(result.payment).toMatchObject({
       status: "rpc_unavailable",

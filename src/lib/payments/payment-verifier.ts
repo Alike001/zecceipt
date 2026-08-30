@@ -23,6 +23,7 @@ const SETTLED_STATUSES: readonly PersistedInvoiceStatus[] = [
   "paid",
   "overpaid",
 ];
+const MAX_MEMPOOL_CANDIDATES_PER_SCAN = 12;
 
 export interface VerifyPaymentResponse {
   payment: PaymentStatusViewModel;
@@ -240,6 +241,15 @@ function malformedTransaction(message: string): RpcClientError {
   });
 }
 
+function incompleteMempoolScan(): RpcClientError {
+  return new RpcClientError({
+    code: "response_too_large",
+    message: "The relevant mempool candidate set exceeded the scan window.",
+    method: "getrawmempool",
+    retryable: true,
+  });
+}
+
 function isIncompleteMempoolCandidateError(
   error: unknown,
 ): error is RpcClientError {
@@ -407,6 +417,7 @@ export async function verifyInvoicePayment(
     let mempoolSnapshotError: RpcClientError | null = null;
     let mempoolCandidateAttempts = 0;
     let usableMempoolCandidates = 0;
+    let mempoolScanTruncated = false;
 
     if (sumOutputs(matchedOutputs) < invoice.expectedAmountZatoshis) {
       activeMethod = "getrawmempool";
@@ -415,14 +426,26 @@ export async function verifyInvoicePayment(
       ]);
       evidence.push(mempoolCall.evidence);
 
-      for (const [transactionId, entry] of Object.entries(mempoolCall.result)) {
+      const relevantMempoolCandidates = Object.entries(mempoolCall.result)
+        .filter(([, entry]) => {
+          const enteredAtMs = entry.time * 1_000;
+          return (
+            enteredAtMs >= Date.parse(invoice.createdAt) &&
+            enteredAtMs <= Date.parse(invoice.expiresAt)
+          );
+        })
+        .sort(
+          ([leftId, left], [rightId, right]) =>
+            right.time - left.time || leftId.localeCompare(rightId),
+        );
+      mempoolScanTruncated =
+        relevantMempoolCandidates.length > MAX_MEMPOOL_CANDIDATES_PER_SCAN;
+
+      for (const [transactionId, entry] of relevantMempoolCandidates.slice(
+        0,
+        MAX_MEMPOOL_CANDIDATES_PER_SCAN,
+      )) {
         const enteredAtMs = entry.time * 1_000;
-        if (
-          enteredAtMs < Date.parse(invoice.createdAt) ||
-          enteredAtMs > Date.parse(invoice.expiresAt)
-        ) {
-          continue;
-        }
 
         activeMethod = "getrawtransaction";
         mempoolCandidateAttempts += 1;
@@ -486,14 +509,15 @@ export async function verifyInvoicePayment(
       mempoolSnapshotError &&
       mempoolCandidateAttempts > 0 &&
       usableMempoolCandidates === 0;
+    const invoiceTimerElapsed =
+      Date.parse(observedAt) >= Date.parse(invoice.expiresAt);
     if (
-      mempoolSnapshotError &&
+      (mempoolSnapshotError || mempoolScanTruncated) &&
       sumOutputs(matchedOutputs) < invoice.expectedAmountZatoshis &&
       pendingOutputs.length === 0 &&
-      (hasNoUsableMempoolCandidate ||
-        Date.parse(observedAt) >= Date.parse(invoice.expiresAt))
+      (hasNoUsableMempoolCandidate || invoiceTimerElapsed)
     ) {
-      throw mempoolSnapshotError;
+      throw mempoolSnapshotError ?? incompleteMempoolScan();
     }
 
     const nextState = derivePaymentStatus({
