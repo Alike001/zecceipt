@@ -8,12 +8,18 @@ the exact requested amount. Zecceipt uses Zcash JSON-RPC to discover matching
 transparent outputs, track their confirmations, and render a public receipt.
 
 [Open the live Testnet app](https://zecceipt.vercel.app/) ·
-[Read the judge walkthrough](docs/judge-demo.md)
+[Watch the demo on YouTube](https://youtu.be/SQa4dg_yf98)
 
 > **Hackathon RPC requirement:** invoice creation already makes three live,
 > server-side calls: `validateaddress`, `getblockchaininfo`, and
 > `getblockcount`. The typed RPC client supports six payment-related methods
 > in total; the complete table is below.
+
+## Demo video
+
+[![Watch the Zecceipt end-to-end Testnet payment demo](https://img.youtube.com/vi/SQa4dg_yf98/maxresdefault.jpg)](https://youtu.be/SQa4dg_yf98)
+
+[Watch the full Zecceipt demo on YouTube](https://youtu.be/SQa4dg_yf98).
 
 ## What is implemented
 
@@ -31,8 +37,8 @@ The public customer-to-merchant browser flow is wired end to end. The API also
 returns `/merchant/invoices/{invoiceId}` and a one-time management token, but a
 private merchant-management page is not routed yet. The `/create` page stores
 only public recent-invoice details in the browser and links back to public
-checkout pages. See the [judge walkthrough](docs/judge-demo.md) for the exact
-demo sequence.
+checkout pages. The [recorded end-to-end demo](https://youtu.be/SQa4dg_yf98)
+shows the complete customer-to-merchant sequence.
 
 ## RPC methods
 
@@ -226,10 +232,10 @@ configuration.
    paid or overpaid status and a receipt containing the transaction ID, output
    index, amount, block evidence, and confirmation count.
 
-Use the [judge walkthrough](docs/judge-demo.md) for a timed presentation and
-redaction checklist. Testnet block timing is outside the app's control, so
-prepare a previously paid invoice as a receipt fallback while still showing the
-new live send.
+The [recorded end-to-end demo](https://youtu.be/SQa4dg_yf98) shows this flow
+with a live Testnet payment. Testnet block timing is outside the app's control,
+so prepare a previously paid invoice as a receipt fallback while still showing
+the new live send.
 
 ## Exercise the live APIs
 
