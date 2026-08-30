@@ -97,6 +97,7 @@ function rpcClient(input: {
   mempoolTransactions?: readonly RawTransactionResult[];
   blockHeight?: number;
   mempoolEnteredAt?: string;
+  mempoolRpcErrorTxids?: readonly string[];
   errorMethod?: ZcashRpcMethod;
 }) {
   const transactions = input.transactions ?? [];
@@ -145,6 +146,14 @@ function rpcClient(input: {
     }
     if (method === "getrawtransaction") {
       const transactionId = (params as [string, 1])[0];
+      if (input.mempoolRpcErrorTxids?.includes(transactionId)) {
+        throw new RpcClientError({
+          code: "rpc_error",
+          message: "Transaction left the mempool snapshot.",
+          method,
+          retryable: true,
+        });
+      }
       const rawTransaction = byId.get(transactionId);
       if (!rawTransaction) throw new Error("Missing transaction fixture.");
       return rpcResult("getrawtransaction", rawTransaction);
@@ -254,6 +263,66 @@ describe("transparent payment verifier", () => {
     expect(
       await repository.findPendingPaymentOutputsByInvoiceId(invoice.id),
     ).toHaveLength(1);
+  });
+
+  it("continues a pre-expiry scan when one mempool transaction vanishes", async () => {
+    const vanished = pendingTransaction({
+      txid: "e".repeat(64),
+      valueZatoshis: 5_000n,
+      address: otherAddress,
+    });
+    const matching = pendingTransaction({
+      txid: "f".repeat(64),
+      valueZatoshis: invoice.expectedAmountZatoshis,
+    });
+
+    const result = await verify(
+      rpcClient({
+        mempoolTransactions: [vanished, matching],
+        mempoolRpcErrorTxids: [vanished.txid],
+      }),
+    );
+
+    expect(result.payment).toMatchObject({
+      status: "pending",
+      pendingOutput: { txid: matching.txid },
+    });
+    expect(result.rpcEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          method: "getrawtransaction",
+          state: "error",
+        }),
+        expect.objectContaining({
+          method: "getrawtransaction",
+          state: "success",
+        }),
+      ]),
+    );
+  });
+
+  it("retries rather than expiring from an incomplete post-expiry mempool scan", async () => {
+    const vanished = pendingTransaction({
+      valueZatoshis: invoice.expectedAmountZatoshis,
+    });
+
+    const result = await verifyInvoicePayment(invoice.id, {
+      rpcClient: rpcClient({
+        mempoolTransactions: [vanished],
+        mempoolRpcErrorTxids: [vanished.txid],
+      }),
+      invoiceRepository: repository,
+      now: () => new Date("2026-08-29T12:31:00.000Z"),
+    });
+
+    expect(result.payment).toMatchObject({
+      status: "rpc_unavailable",
+      lastKnownStatus: "waiting",
+    });
+    expect(await repository.findById(invoice.id)).toMatchObject({
+      status: "waiting",
+      receivedZatoshis: 0n,
+    });
   });
 
   it("keeps a pre-expiry transaction pending after the invoice timer ends", async () => {
