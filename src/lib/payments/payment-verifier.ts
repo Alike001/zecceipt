@@ -240,6 +240,15 @@ function malformedTransaction(message: string): RpcClientError {
   });
 }
 
+function isIncompleteMempoolCandidateError(
+  error: unknown,
+): error is RpcClientError {
+  return (
+    error instanceof RpcClientError &&
+    (error.code === "rpc_error" || error.code === "malformed_response")
+  );
+}
+
 export async function verifyInvoicePayment(
   invoiceId: string,
   dependencies: VerifyPaymentDependencies,
@@ -417,56 +426,56 @@ export async function verifyInvoicePayment(
         }
 
         activeMethod = "getrawtransaction";
-        const transactionCall = await dependencies.rpcClient
-          .call("getrawtransaction", [transactionId, 1])
-          .catch((error: unknown) => {
-            if (error instanceof RpcClientError && error.code === "rpc_error") {
-              mempoolSnapshotError = error;
-              evidence.push(rpcErrorEvidence("getrawtransaction", observedAt));
-              return null;
-            }
-            throw error;
-          });
-        if (!transactionCall) continue;
-        evidence.push(transactionCall.evidence);
-        const transaction = transactionCall.result;
-
-        if (
-          transaction.txid !== transactionId ||
-          transaction.expiryheight === undefined
-        ) {
-          throw malformedTransaction(
-            "A mempool transaction was missing reliable identity or expiry evidence.",
+        try {
+          const transactionCall = await dependencies.rpcClient.call(
+            "getrawtransaction",
+            [transactionId, 1],
           );
-        }
-        if (
-          transaction.blockhash !== undefined ||
-          transaction.height !== undefined
-        ) {
-          continue;
-        }
+          evidence.push(transactionCall.evidence);
+          const transaction = transactionCall.result;
 
-        for (const output of transaction.vout) {
           if (
-            output.valueZat !== Number(invoice.expectedAmountZatoshis) ||
-            !output.scriptPubKey.addresses?.includes(invoice.recipientAddress)
+            transaction.txid !== transactionId ||
+            transaction.expiryheight === undefined
+          ) {
+            throw malformedTransaction(
+              "A mempool transaction was missing reliable identity or expiry evidence.",
+            );
+          }
+          if (
+            transaction.blockhash !== undefined ||
+            transaction.height !== undefined
           ) {
             continue;
           }
 
-          const identity = `${transaction.txid}:${output.n}`;
-          pendingByIdentity.set(identity, {
-            invoiceId: invoice.id,
-            txid: transaction.txid,
-            outputIndex: output.n,
-            valueZatoshis: BigInt(output.valueZat),
-            mempoolEnteredAt: new Date(enteredAtMs).toISOString(),
-            expiryHeight: transaction.expiryheight,
-            observedAt,
-            firstSeenAt:
-              pendingByIdentity.get(identity)?.firstSeenAt ?? observedAt,
-            lastSeenAt: observedAt,
-          });
+          for (const output of transaction.vout) {
+            if (
+              output.valueZat !== Number(invoice.expectedAmountZatoshis) ||
+              !output.scriptPubKey.addresses?.includes(invoice.recipientAddress)
+            ) {
+              continue;
+            }
+
+            const identity = `${transaction.txid}:${output.n}`;
+            pendingByIdentity.set(identity, {
+              invoiceId: invoice.id,
+              txid: transaction.txid,
+              outputIndex: output.n,
+              valueZatoshis: BigInt(output.valueZat),
+              mempoolEnteredAt: new Date(enteredAtMs).toISOString(),
+              expiryHeight: transaction.expiryheight,
+              observedAt,
+              firstSeenAt:
+                pendingByIdentity.get(identity)?.firstSeenAt ?? observedAt,
+              lastSeenAt: observedAt,
+            });
+          }
+        } catch (error: unknown) {
+          if (!isIncompleteMempoolCandidateError(error)) throw error;
+
+          mempoolSnapshotError = error;
+          evidence.push(rpcErrorEvidence("getrawtransaction", observedAt));
         }
       }
     }
