@@ -4,6 +4,7 @@ export const ZCASH_RPC_METHODS = [
   "validateaddress",
   "getblockchaininfo",
   "getblockcount",
+  "getrawmempool",
   "getaddresstxids",
   "getrawtransaction",
 ] as const;

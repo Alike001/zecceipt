@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PaymentStatusTimeline } from "@/components/checkout/payment-status-timeline";
-import type { MatchedPaymentOutput } from "@/types";
+import type { MatchedPaymentOutput, PendingPaymentOutput } from "@/types";
 
 const mockOutput1: MatchedPaymentOutput = {
   txid: "9b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c",
@@ -22,6 +22,15 @@ const mockOutput2: MatchedPaymentOutput = {
   blockHeight: 3456790,
   blockHash: "000000000abcdef0123456789abcdef0123456789abcdef0123456789abcdef0",
   confirmations: 1,
+};
+
+const pendingOutput: PendingPaymentOutput = {
+  txid: "6".repeat(64),
+  outputIndex: 0,
+  amountZec: "0.50000000",
+  amountZats: "50000000",
+  mempoolEnteredAt: "2026-08-29T10:55:00.000Z",
+  expiryHeight: 3_456_820,
 };
 
 describe("PaymentStatusTimeline", () => {
@@ -164,6 +173,33 @@ describe("PaymentStatusTimeline", () => {
 
     expect(screen.getByText("Invoice Expired")).toBeInTheDocument();
     expect(screen.getByText(/with 0 TAZ received/i)).toBeInTheDocument();
+  });
+
+  it("warns against resending while a pre-expiry transaction is still pending", () => {
+    render(
+      <PaymentStatusTimeline
+        view={{
+          invoiceId: "inv_123",
+          status: "pending_after_expiry",
+          expectedAmountZec: "0.50000000",
+          receivedAmountZec: "0.00000000",
+          expiredAt: "2026-08-29T11:00:00.000Z",
+          observedAt: "2026-08-29T11:01:00.000Z",
+          pendingOutput,
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText("Payment Pending After Invoice Expiry"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Do not send another payment/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Network expiry height #3,456,820/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Payment received & verified/i)).toBeNull();
   });
 
   it("renders expired_partial state with received and shortfall records", () => {

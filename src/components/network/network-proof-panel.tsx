@@ -44,6 +44,7 @@ const METHOD_PURPOSES: Record<ZcashRpcMethod, string> = {
   validateaddress: "Validate transparent recipients",
   getblockchaininfo: "Read chain and node sync state",
   getblockcount: "Read the latest observed block height",
+  getrawmempool: "Inspect pending transaction IDs",
   getaddresstxids: "Find transactions for a transparent address",
   getrawtransaction: "Inspect transaction outputs and confirmations",
 };

@@ -31,6 +31,8 @@ export interface RecentInvoiceSummary {
   exactAmountZec: string;
   status:
     | "waiting"
+    | "pending"
+    | "pending_after_expiry"
     | "partial"
     | "confirming"
     | "paid"

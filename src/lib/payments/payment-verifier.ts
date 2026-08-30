@@ -5,6 +5,7 @@ import { formatZatoshis } from "@/lib/invoices/money";
 import {
   InvoiceRepository,
   type InvoiceRecord,
+  type PendingPaymentOutputRecord,
   type PaymentOutputRecord,
   type PersistedInvoiceStatus,
 } from "@/lib/invoices/repository";
@@ -12,14 +13,15 @@ import { RpcClientError, toUnavailableMessage } from "@/lib/zcash/rpc-errors";
 import { getZcashRpcClient, type ZcashRpcClient } from "@/lib/zcash/rpc-client";
 import type {
   MatchedPaymentOutput,
+  PendingPaymentOutput,
   PaymentStatusViewModel,
   RpcEvidenceItem,
   ZcashRpcMethod,
 } from "@/types";
 
-const TERMINAL_EXPIRY_STATUSES: readonly PersistedInvoiceStatus[] = [
-  "expired",
-  "expired_partial",
+const SETTLED_STATUSES: readonly PersistedInvoiceStatus[] = [
+  "paid",
+  "overpaid",
 ];
 
 export interface VerifyPaymentResponse {
@@ -62,6 +64,8 @@ export function derivePaymentStatus(input: {
     "valueZatoshis" | "confirmations"
   >[];
   confirmationTarget: number;
+  pendingOutputs: readonly Pick<PendingPaymentOutputRecord, "expiryHeight">[];
+  currentHeight: number;
   expiresAt: string;
   observedAt: string;
 }): {
@@ -70,8 +74,17 @@ export function derivePaymentStatus(input: {
 } {
   const receivedZatoshis = sumOutputs(input.outputs);
   const expired = Date.parse(input.observedAt) >= Date.parse(input.expiresAt);
+  const hasLivePendingOutput = input.pendingOutputs.some(
+    (output) => output.expiryHeight > input.currentHeight,
+  );
 
   if (receivedZatoshis === 0n) {
+    if (hasLivePendingOutput) {
+      return {
+        status: expired ? "pending_after_expiry" : "pending",
+        receivedZatoshis,
+      };
+    }
     return { status: expired ? "expired" : "waiting", receivedZatoshis };
   }
   if (receivedZatoshis < input.expectedAmountZatoshis) {
@@ -104,10 +117,24 @@ function toMatchedOutput(output: PaymentOutputRecord): MatchedPaymentOutput {
   };
 }
 
+function toPendingOutput(
+  output: PendingPaymentOutputRecord,
+): PendingPaymentOutput {
+  return {
+    txid: output.txid,
+    outputIndex: output.outputIndex,
+    amountZec: formatZatoshis(output.valueZatoshis),
+    amountZats: output.valueZatoshis.toString(),
+    mempoolEnteredAt: output.mempoolEnteredAt,
+    expiryHeight: output.expiryHeight,
+  };
+}
+
 export function toPaymentStatusView(
   invoice: InvoiceRecord,
   outputs: readonly PaymentOutputRecord[],
   observedAt: string,
+  pendingOutputs: readonly PendingPaymentOutputRecord[] = [],
 ): PaymentStatusViewModel {
   const expectedAmountZec = formatZatoshis(invoice.expectedAmountZatoshis);
   const receivedAmountZec = formatZatoshis(invoice.receivedZatoshis);
@@ -122,6 +149,27 @@ export function toPaymentStatusView(
   switch (invoice.status) {
     case "waiting":
       return { ...base, status: "waiting" };
+    case "pending": {
+      const pendingOutput = pendingOutputs[0];
+      if (!pendingOutput) return { ...base, status: "waiting" };
+      return {
+        ...base,
+        status: "pending",
+        pendingOutput: toPendingOutput(pendingOutput),
+      };
+    }
+    case "pending_after_expiry": {
+      const pendingOutput = pendingOutputs[0];
+      if (!pendingOutput) {
+        return { ...base, status: "expired", expiredAt: invoice.expiresAt };
+      }
+      return {
+        ...base,
+        status: "pending_after_expiry",
+        expiredAt: invoice.expiresAt,
+        pendingOutput: toPendingOutput(pendingOutput),
+      };
+    }
     case "partial":
       return {
         ...base,
@@ -205,10 +253,19 @@ export async function verifyInvoicePayment(
     await dependencies.invoiceRepository.findPaymentOutputsByInvoiceId(
       invoice.id,
     );
+  const existingPendingOutputs =
+    await dependencies.invoiceRepository.findPendingPaymentOutputsByInvoiceId(
+      invoice.id,
+    );
 
-  if (TERMINAL_EXPIRY_STATUSES.includes(invoice.status)) {
+  if (SETTLED_STATUSES.includes(invoice.status)) {
     return {
-      payment: toPaymentStatusView(invoice, existingOutputs, observedAt),
+      payment: toPaymentStatusView(
+        invoice,
+        existingOutputs,
+        observedAt,
+        existingPendingOutputs,
+      ),
       rpcEvidence: [],
     };
   }
@@ -226,6 +283,12 @@ export async function verifyInvoicePayment(
     const scanStart = invoice.creationHeight + 1;
 
     let matchedOutputs: PaymentOutputRecord[] = [];
+    const previouslyPendingByIdentity = new Map(
+      existingPendingOutputs.map((output) => [
+        `${output.txid}:${output.outputIndex}`,
+        output,
+      ]),
+    );
 
     if (scanStart <= currentHeight) {
       activeMethod = "getaddresstxids";
@@ -274,10 +337,7 @@ export async function verifyInvoicePayment(
             "A mined transaction was missing reliable block evidence.",
           );
         }
-
-        if (transaction.blocktime * 1_000 > Date.parse(invoice.expiresAt)) {
-          continue;
-        }
+        const blocktime = transaction.blocktime;
 
         const maximumConfirmations = currentHeight - transaction.height + 1;
         const confirmations = Math.min(
@@ -287,13 +347,29 @@ export async function verifyInvoicePayment(
 
         matchedOutputs = matchedOutputs.concat(
           transaction.vout
-            .filter(
-              (output) =>
-                output.valueZat > 0 &&
-                output.scriptPubKey.addresses?.includes(
+            .filter((output) => {
+              if (
+                output.valueZat <= 0 ||
+                !output.scriptPubKey.addresses?.includes(
                   invoice.recipientAddress,
-                ),
-            )
+                )
+              ) {
+                return false;
+              }
+
+              if (blocktime * 1_000 <= Date.parse(invoice.expiresAt)) {
+                return true;
+              }
+
+              const pending = previouslyPendingByIdentity.get(
+                `${transaction.txid}:${output.n}`,
+              );
+              return Boolean(
+                pending &&
+                Date.parse(pending.mempoolEnteredAt) <=
+                  Date.parse(invoice.expiresAt),
+              );
+            })
             .map((output) => ({
               invoiceId: invoice.id,
               txid: transaction.txid,
@@ -310,17 +386,103 @@ export async function verifyInvoicePayment(
       }
     }
 
+    const minedIdentities = new Set(
+      matchedOutputs.map((output) => `${output.txid}:${output.outputIndex}`),
+    );
+    const pendingByIdentity = new Map(
+      existingPendingOutputs
+        .filter(
+          (output) =>
+            output.expiryHeight > currentHeight ||
+            minedIdentities.has(`${output.txid}:${output.outputIndex}`),
+        )
+        .map((output) => [`${output.txid}:${output.outputIndex}`, output]),
+    );
+
+    if (sumOutputs(matchedOutputs) < invoice.expectedAmountZatoshis) {
+      activeMethod = "getrawmempool";
+      const mempoolCall = await dependencies.rpcClient.call("getrawmempool", [
+        true,
+      ]);
+      evidence.push(mempoolCall.evidence);
+
+      for (const [transactionId, entry] of Object.entries(mempoolCall.result)) {
+        const enteredAtMs = entry.time * 1_000;
+        if (
+          enteredAtMs < Date.parse(invoice.createdAt) ||
+          enteredAtMs > Date.parse(invoice.expiresAt)
+        ) {
+          continue;
+        }
+
+        activeMethod = "getrawtransaction";
+        const transactionCall = await dependencies.rpcClient.call(
+          "getrawtransaction",
+          [transactionId, 1],
+        );
+        evidence.push(transactionCall.evidence);
+        const transaction = transactionCall.result;
+
+        if (
+          transaction.txid !== transactionId ||
+          transaction.expiryheight === undefined
+        ) {
+          throw malformedTransaction(
+            "A mempool transaction was missing reliable identity or expiry evidence.",
+          );
+        }
+        if (
+          transaction.blockhash !== undefined ||
+          transaction.height !== undefined
+        ) {
+          continue;
+        }
+
+        for (const output of transaction.vout) {
+          if (
+            output.valueZat !== Number(invoice.expectedAmountZatoshis) ||
+            !output.scriptPubKey.addresses?.includes(invoice.recipientAddress)
+          ) {
+            continue;
+          }
+
+          const identity = `${transaction.txid}:${output.n}`;
+          pendingByIdentity.set(identity, {
+            invoiceId: invoice.id,
+            txid: transaction.txid,
+            outputIndex: output.n,
+            valueZatoshis: BigInt(output.valueZat),
+            mempoolEnteredAt: new Date(enteredAtMs).toISOString(),
+            expiryHeight: transaction.expiryheight,
+            observedAt,
+            firstSeenAt:
+              pendingByIdentity.get(identity)?.firstSeenAt ?? observedAt,
+            lastSeenAt: observedAt,
+          });
+        }
+      }
+    }
+
+    const pendingOutputs = [...pendingByIdentity.values()];
+
     const nextState = derivePaymentStatus({
       expectedAmountZatoshis: invoice.expectedAmountZatoshis,
       outputs: matchedOutputs,
       confirmationTarget: invoice.confirmationTarget,
+      pendingOutputs,
+      currentHeight,
       expiresAt: invoice.expiresAt,
       observedAt,
     });
+    const pendingOutputsForReconciliation =
+      nextState.status === "paid" || nextState.status === "overpaid"
+        ? []
+        : pendingOutputs;
     const reconciled =
       await dependencies.invoiceRepository.reconcilePaymentOutputs({
         invoiceId: invoice.id,
         outputs: matchedOutputs,
+        pendingOutputs: pendingOutputsForReconciliation,
         status: nextState.status,
         receivedZatoshis: nextState.receivedZatoshis,
         observedAt,
@@ -333,6 +495,7 @@ export async function verifyInvoicePayment(
         reconciled.invoice,
         reconciled.outputs,
         observedAt,
+        reconciled.pendingOutputs,
       ),
       rpcEvidence: evidence,
     };

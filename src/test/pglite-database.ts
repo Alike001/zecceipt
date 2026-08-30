@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 
 import { PGlite, type Transaction } from "@electric-sql/pglite";
 
@@ -25,16 +25,23 @@ export async function createTestDatabase(): Promise<{
   close: () => Promise<void>;
 }> {
   const pglite = await PGlite.create();
-  const migration = await readFile(
-    new URL("../../db/migrations/0001_create_invoices.sql", import.meta.url),
-    "utf8",
-  );
+  const migrationsDirectory = new URL("../../db/migrations/", import.meta.url);
+  const migrationFiles = (await readdir(migrationsDirectory))
+    .filter((fileName) => fileName.endsWith(".sql"))
+    .sort();
 
-  for (const statement of migration
-    .split("-- statement-breakpoint")
-    .map((part) => part.trim())
-    .filter(Boolean)) {
-    await pglite.exec(statement);
+  for (const migrationFile of migrationFiles) {
+    const migration = await readFile(
+      new URL(migrationFile, migrationsDirectory),
+      "utf8",
+    );
+
+    for (const statement of migration
+      .split("-- statement-breakpoint")
+      .map((part) => part.trim())
+      .filter(Boolean)) {
+      await pglite.exec(statement);
+    }
   }
 
   const database: Database = {

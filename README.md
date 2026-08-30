@@ -9,20 +9,20 @@ transparent outputs, track their confirmations, and render a public receipt.
 
 > **Hackathon RPC requirement:** invoice creation already makes three live,
 > server-side calls: `validateaddress`, `getblockchaininfo`, and
-> `getblockcount`. The typed RPC client supports five payment-related methods
+> `getblockcount`. The typed RPC client supports six payment-related methods
 > in total; the complete table is below.
 
 ## What is implemented
 
-| Surface                                | Current behavior                                                                                                                                                       |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/`                                    | Renders the product landing page with a server-fetched Testnet network rail showing height, RPC availability, and observation time.                                    |
-| `/create`                              | Validates the address on blur, creates a durable invoice, links to its checkout, and keeps a public recent-invoice list in browser storage.                            |
-| `/checkout/{invoiceId}`                | Loads the public invoice, renders its exact amount and ZIP-321 QR, polls immediately and every eight seconds, and displays a receipt after settlement.                 |
-| `GET /api/network`                     | Reports live/syncing/unavailable Testnet state, height, and RPC evidence. Returns `503` when live network evidence is unavailable.                                     |
-| `POST /api/addresses/validate`         | Checks a syntactically eligible transparent Testnet address with `validateaddress`; keeps provider failures distinct from invalid addresses.                           |
-| `POST /api/invoices`                   | Validates the recipient, reads current chain state, stores an invoice in PostgreSQL, and returns public checkout and private management contracts.                     |
-| `GET /api/invoices/{invoiceId}/status` | Scans blocks after invoice creation, reconciles matching recipient outputs, persists status, and returns RPC evidence without turning provider failures into “unpaid.” |
+| Surface                                | Current behavior                                                                                                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                    | Renders the product landing page with a server-fetched Testnet network rail showing height, RPC availability, and observation time.                                   |
+| `/create`                              | Validates the address on blur, creates a durable invoice, links to its checkout, and keeps a public recent-invoice list in browser storage.                           |
+| `/checkout/{invoiceId}`                | Loads the public invoice, renders its exact amount and ZIP-321 QR, polls immediately and every eight seconds, and displays a receipt after settlement.                |
+| `GET /api/network`                     | Reports live/syncing/unavailable Testnet state, height, and RPC evidence. Returns `503` when live network evidence is unavailable.                                    |
+| `POST /api/addresses/validate`         | Checks a syntactically eligible transparent Testnet address with `validateaddress`; keeps provider failures distinct from invalid addresses.                          |
+| `POST /api/invoices`                   | Validates the recipient, reads current chain state, stores an invoice in PostgreSQL, and returns public checkout and private management contracts.                    |
+| `GET /api/invoices/{invoiceId}/status` | Scans mined blocks and the mempool, reconciles matching recipient outputs, persists status, and returns RPC evidence without turning provider failures into “unpaid.” |
 
 The public customer-to-merchant browser flow is wired end to end. The API also
 returns `/merchant/invoices/{invoiceId}` and a one-time management token, but a
@@ -42,8 +42,9 @@ as proof that an invoice is unpaid.
 | [`validateaddress`](https://zcash.github.io/rpc/validateaddress.html)     | Ask the node to validate an eligible `tm` or `t2` recipient before an invoice is stored.          | Called by address checking and `POST /api/invoices`.                 |
 | [`getblockchaininfo`](https://zcash.github.io/rpc/getblockchaininfo.html) | Confirm that the endpoint serves Testnet and expose node sync state.                              | Called by invoice creation and `GET /api/network`.                   |
 | [`getblockcount`](https://zcash.github.io/rpc/getblockcount.html)         | Record invoice creation height and bound each later payment scan at the current height.           | Called by invoice creation, network proof, and payment verification. |
+| [`getrawmempool`](https://zcash.github.io/rpc/getrawmempool.html)         | Find unconfirmed transactions and prove when they entered the node's mempool.                     | Called by the invoice-status verifier.                               |
 | [`getaddresstxids`](https://zcash.github.io/rpc/getaddresstxids.html)     | Discover transaction IDs for the transparent recipient between creation and current height.       | Called by the invoice-status verifier.                               |
-| [`getrawtransaction`](https://zcash.github.io/rpc/getrawtransaction.html) | Inspect mined outputs, output indexes, integer zatoshi values, block evidence, and confirmations. | Called for each candidate transaction found by the status verifier.  |
+| [`getrawtransaction`](https://zcash.github.io/rpc/getrawtransaction.html) | Inspect pending or mined outputs, integer zatoshi values, expiry height, and block confirmations. | Called for each candidate transaction found by the status verifier.  |
 
 The first three calls satisfy the three-method hackathon requirement during
 invoice creation. During verification, Zecceipt sums positive outputs to the
@@ -77,12 +78,14 @@ so this MVP does not provide shielded-payment privacy.
 ## MVP limitations
 
 - Only transparent `tm` and `t2` Testnet recipients are accepted.
-- Verification scans mined transactions from the block after invoice creation;
-  it does not treat a mempool transaction as payment evidence.
+- Mempool matches remain pending and never create a receipt. Zecceipt keeps
+  monitoring a transaction first observed during the invoice lifetime until it
+  is mined or reaches its own network expiry height.
 - A matched transaction must include reliable height, block hash, block time,
   confirmations, recipient, value, transaction ID, and output-index evidence.
-- Outputs mined after the invoice expiry time are ignored. Testnet block timing
-  can therefore affect short-lived demo invoices.
+- Outputs first observed only after invoice expiry are ignored. A transaction
+  proven to have entered the mempool before invoice expiry can still settle if
+  it is mined later.
 - QuickNode and PostgreSQL are runtime dependencies. Provider or database
   downtime prevents fresh verification; the last persisted state remains
   distinct from a live observation.

@@ -76,11 +76,12 @@ In the customer wallet:
 Explain the server flow while waiting:
 
 1. `getblockcount` bounds the scan at the current Testnet tip.
-2. `getaddresstxids` finds transactions for the recipient after invoice
+2. `getrawmempool` identifies unconfirmed candidates without claiming payment.
+3. `getaddresstxids` finds mined transactions for the recipient after invoice
    creation.
-3. `getrawtransaction` supplies mined outputs, block evidence, and
-   confirmations.
-4. Zecceipt persists each matching transaction ID/output index and sums values
+4. `getrawtransaction` supplies pending outputs, transaction expiry height,
+   mined block evidence, and confirmations.
+5. Zecceipt persists each matching transaction ID/output index and sums values
    as integer zatoshis. It reports paid only at the exact confirmed total and
    overpaid above it.
 
@@ -106,16 +107,16 @@ browser and links to public checkouts.
 
 ## Screenshot and evidence checklist
 
-| Capture                                | What it proves                                                                                 | Redaction/check                                                           |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Landing page with live network rail    | Server-fetched Testnet height, RPC availability, and observation time.                         | Show the app URL, never the provider endpoint.                            |
-| `/create` address and network panel    | Live `validateaddress`, named network evidence, five-method catalog, and transparent boundary. | Use a Testnet receive address intended for the demo.                      |
-| Invoice success state and recent row   | Durable invoice creation and a working link to public checkout.                                | Do not open or capture the raw `merchantManagement` API object.           |
-| New public checkout before payment     | Exact amount, zatoshis, recipient, fingerprint, ZIP-321 QR, expiry, and waiting state.         | Verify the badge says Testnet.                                            |
-| Customer wallet send                   | A real customer-to-merchant Testnet action and transaction ID.                                 | Hide balance, account name, unrelated history, and all recovery material. |
-| Confirming or paid timeline            | Live `getblockcount`, `getaddresstxids`, and `getrawtransaction` evidence tied to a status.    | If using the rehearsal invoice, label it clearly.                         |
-| Settled receipt after refresh          | Persisted txid/output index, amount, block data, confirmations, and public receipt.            | Confirm no management token or endpoint URL is visible.                   |
-| Unavailable state, captured separately | Honest fail-closed behavior when RPC evidence cannot be refreshed.                             | Say “unavailable,” never “unpaid.”                                        |
+| Capture                                | What it proves                                                                                  | Redaction/check                                                           |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Landing page with live network rail    | Server-fetched Testnet height, RPC availability, and observation time.                          | Show the app URL, never the provider endpoint.                            |
+| `/create` address and network panel    | Live `validateaddress`, named network evidence, six-method catalog, and transparent boundary.   | Use a Testnet receive address intended for the demo.                      |
+| Invoice success state and recent row   | Durable invoice creation and a working link to public checkout.                                 | Do not open or capture the raw `merchantManagement` API object.           |
+| New public checkout before payment     | Exact amount, zatoshis, recipient, fingerprint, ZIP-321 QR, expiry, and waiting state.          | Verify the badge says Testnet.                                            |
+| Customer wallet send                   | A real customer-to-merchant Testnet action and transaction ID.                                  | Hide balance, account name, unrelated history, and all recovery material. |
+| Pending, confirming, or paid timeline  | Live mempool, address-history, decoded-transaction, and block-height evidence tied to a status. | If using the rehearsal invoice, label it clearly.                         |
+| Settled receipt after refresh          | Persisted txid/output index, amount, block data, confirmations, and public receipt.             | Confirm no management token or endpoint URL is visible.                   |
+| Unavailable state, captured separately | Honest fail-closed behavior when RPC evidence cannot be refreshed.                              | Say “unavailable,” never “unpaid.”                                        |
 
 Repository-provided fallback component captures:
 

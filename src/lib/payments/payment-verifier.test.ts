@@ -70,14 +70,47 @@ function transaction(input: {
   };
 }
 
+function pendingTransaction(input: {
+  txid?: string;
+  valueZatoshis: bigint;
+  address?: string;
+  expiryHeight?: number;
+}): RawTransactionResult {
+  return {
+    txid: input.txid ?? "c".repeat(64),
+    expiryheight: input.expiryHeight ?? currentHeight + 10,
+    vout: [
+      {
+        n: 0,
+        valueZat: Number(input.valueZatoshis),
+        scriptPubKey: {
+          type: "pubkeyhash",
+          addresses: [input.address ?? recipientAddress],
+        },
+      },
+    ],
+  };
+}
+
 function rpcClient(input: {
   transactions?: readonly RawTransactionResult[];
+  mempoolTransactions?: readonly RawTransactionResult[];
+  blockHeight?: number;
+  mempoolEnteredAt?: string;
   errorMethod?: ZcashRpcMethod;
 }) {
   const transactions = input.transactions ?? [];
-  const byId = new Map(
+  const mempoolTransactions = input.mempoolTransactions ?? [];
+  const minedById = new Map(
     transactions.map((rawTransaction) => [rawTransaction.txid, rawTransaction]),
   );
+  const byId = new Map([
+    ...minedById,
+    ...mempoolTransactions.map(
+      (rawTransaction) => [rawTransaction.txid, rawTransaction] as const,
+    ),
+  ]);
+  const blockHeight = input.blockHeight ?? currentHeight;
   const call = vi.fn(async (method: ZcashRpcMethod, params: unknown) => {
     if (method === input.errorMethod) {
       throw new RpcClientError({
@@ -88,10 +121,27 @@ function rpcClient(input: {
       });
     }
     if (method === "getblockcount") {
-      return rpcResult("getblockcount", currentHeight);
+      return rpcResult("getblockcount", blockHeight);
+    }
+    if (method === "getrawmempool") {
+      return rpcResult(
+        "getrawmempool",
+        Object.fromEntries(
+          mempoolTransactions.map((rawTransaction) => [
+            rawTransaction.txid,
+            {
+              time:
+                Date.parse(
+                  input.mempoolEnteredAt ?? "2026-08-29T12:04:00.000Z",
+                ) / 1_000,
+              height: blockHeight,
+            },
+          ]),
+        ),
+      );
     }
     if (method === "getaddresstxids") {
-      return rpcResult("getaddresstxids", [...byId.keys()]);
+      return rpcResult("getaddresstxids", [...minedById.keys()]);
     }
     if (method === "getrawtransaction") {
       const transactionId = (params as [string, 1])[0];
@@ -175,6 +225,108 @@ describe("transparent payment verifier", () => {
       outputIndex: 0,
       valueZatoshis: invoice.expectedAmountZatoshis,
     });
+  });
+
+  it("matches an exact mempool output without claiming it is paid", async () => {
+    const rawTransaction = pendingTransaction({
+      valueZatoshis: invoice.expectedAmountZatoshis,
+    });
+
+    const result = await verify(
+      rpcClient({ mempoolTransactions: [rawTransaction] }),
+    );
+
+    expect(result.payment).toMatchObject({
+      status: "pending",
+      receivedAmountZec: "0.00000000",
+      pendingOutput: {
+        txid: rawTransaction.txid,
+        amountZec: "0.10000001",
+        expiryHeight: currentHeight + 10,
+      },
+    });
+    expect(result.rpcEvidence.map((item) => item.method)).toEqual([
+      "getblockcount",
+      "getaddresstxids",
+      "getrawmempool",
+      "getrawtransaction",
+    ]);
+    expect(
+      await repository.findPendingPaymentOutputsByInvoiceId(invoice.id),
+    ).toHaveLength(1);
+  });
+
+  it("keeps a pre-expiry transaction pending after the invoice timer ends", async () => {
+    const rawTransaction = pendingTransaction({
+      valueZatoshis: invoice.expectedAmountZatoshis,
+    });
+    await verify(rpcClient({ mempoolTransactions: [rawTransaction] }));
+
+    const result = await verifyInvoicePayment(invoice.id, {
+      rpcClient: rpcClient({ blockHeight: currentHeight + 1 }),
+      invoiceRepository: repository,
+      now: () => new Date("2026-08-29T12:31:00.000Z"),
+    });
+
+    expect(result.payment).toMatchObject({
+      status: "pending_after_expiry",
+      expiredAt: "2026-08-29T12:30:00.000Z",
+      pendingOutput: { txid: rawTransaction.txid },
+    });
+  });
+
+  it("credits a pre-expiry mempool transaction mined after invoice expiry", async () => {
+    const txid = "d".repeat(64);
+    await verify(
+      rpcClient({
+        mempoolTransactions: [
+          pendingTransaction({
+            txid,
+            valueZatoshis: invoice.expectedAmountZatoshis,
+          }),
+        ],
+      }),
+    );
+
+    const result = await verifyInvoicePayment(invoice.id, {
+      rpcClient: rpcClient({
+        blockHeight: currentHeight + 1,
+        transactions: [
+          transaction({
+            txid,
+            valueZatoshis: invoice.expectedAmountZatoshis,
+            height: currentHeight + 1,
+            blocktime: Date.parse("2026-08-29T12:31:00.000Z") / 1_000,
+          }),
+        ],
+      }),
+      invoiceRepository: repository,
+      now: () => new Date("2026-08-29T12:32:00.000Z"),
+    });
+
+    expect(result.payment.status).toBe("paid");
+    expect(
+      await repository.findPendingPaymentOutputsByInvoiceId(invoice.id),
+    ).toEqual([]);
+  });
+
+  it("expires an unmined payment only after its transaction expiry height", async () => {
+    const rawTransaction = pendingTransaction({
+      valueZatoshis: invoice.expectedAmountZatoshis,
+      expiryHeight: currentHeight + 1,
+    });
+    await verify(rpcClient({ mempoolTransactions: [rawTransaction] }));
+
+    const result = await verifyInvoicePayment(invoice.id, {
+      rpcClient: rpcClient({ blockHeight: currentHeight + 1 }),
+      invoiceRepository: repository,
+      now: () => new Date("2026-08-29T12:31:00.000Z"),
+    });
+
+    expect(result.payment.status).toBe("expired");
+    expect(
+      await repository.findPendingPaymentOutputsByInvoiceId(invoice.id),
+    ).toEqual([]);
   });
 
   it("reports a partial payment and its exact integer shortfall", async () => {

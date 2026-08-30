@@ -26,9 +26,10 @@ export async function loadPublicInvoice(
   database: Database = getDatabase(),
 ): Promise<PublicInvoicePageData | null> {
   const repository = new InvoiceRepository(database);
-  const [invoice, outputs] = await Promise.all([
+  const [invoice, outputs, pendingOutputs] = await Promise.all([
     repository.findById(invoiceId),
     repository.findPaymentOutputsByInvoiceId(invoiceId),
+    repository.findPendingPaymentOutputsByInvoiceId(invoiceId),
   ]);
 
   if (!invoice) return null;
@@ -54,6 +55,7 @@ export async function loadPublicInvoice(
     invoice,
     outputs,
     invoice.lastCheckedAt ?? invoice.createdAt,
+    pendingOutputs,
   );
 
   return {
