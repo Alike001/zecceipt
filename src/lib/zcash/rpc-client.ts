@@ -141,6 +141,25 @@ function parseAddressTxids(value: unknown) {
   return value;
 }
 
+function parseRawMempool(value: unknown) {
+  const result = expectRecord(value, "getrawmempool");
+  const entries: Record<string, { time: number; height: number }> = {};
+
+  for (const [txid, rawEntry] of Object.entries(result)) {
+    const entry = expectRecord(rawEntry, "getrawmempool");
+    if (
+      txid.length === 0 ||
+      !isNonNegativeInteger(entry.time) ||
+      !isNonNegativeInteger(entry.height)
+    ) {
+      throw malformedResult("getrawmempool");
+    }
+    entries[txid] = { time: entry.time, height: entry.height };
+  }
+
+  return entries;
+}
+
 function parseTransparentOutput(value: unknown): TransparentOutput {
   const output = expectRecord(value, "getrawtransaction");
   const scriptPubKey = expectRecord(output.scriptPubKey, "getrawtransaction");
@@ -195,6 +214,13 @@ function parseRawTransaction(value: unknown): RawTransactionResult {
     throw malformedResult("getrawtransaction");
   }
 
+  if (
+    result.expiryheight !== undefined &&
+    !isNonNegativeInteger(result.expiryheight)
+  ) {
+    throw malformedResult("getrawtransaction");
+  }
+
   if (result.height !== undefined && !isNonNegativeInteger(result.height)) {
     throw malformedResult("getrawtransaction");
   }
@@ -213,6 +239,9 @@ function parseRawTransaction(value: unknown): RawTransactionResult {
   return {
     txid: result.txid,
     vout: result.vout.map(parseTransparentOutput),
+    ...(typeof result.expiryheight === "number"
+      ? { expiryheight: result.expiryheight }
+      : {}),
     ...(typeof result.confirmations === "number"
       ? { confirmations: result.confirmations }
       : {}),
@@ -232,6 +261,7 @@ const resultParsers: {
   validateaddress: parseValidateAddress,
   getblockchaininfo: parseBlockchainInfo,
   getblockcount: parseBlockCount,
+  getrawmempool: parseRawMempool,
   getaddresstxids: parseAddressTxids,
   getrawtransaction: parseRawTransaction,
 };

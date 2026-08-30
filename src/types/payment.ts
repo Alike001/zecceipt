@@ -10,6 +10,15 @@ export interface MatchedPaymentOutput {
   confirmations: number;
 }
 
+export interface PendingPaymentOutput {
+  txid: string;
+  outputIndex: number;
+  amountZec: string;
+  amountZats: string;
+  mempoolEnteredAt: IsoDateTime;
+  expiryHeight: number;
+}
+
 interface PaymentStateBase {
   invoiceId: string;
   expectedAmountZec: string;
@@ -21,6 +30,8 @@ export type SettledPaymentStatus = "paid" | "overpaid";
 
 export type SafePaymentStatus =
   | "waiting"
+  | "pending"
+  | "pending_after_expiry"
   | "partial"
   | "confirming"
   | SettledPaymentStatus
@@ -30,6 +41,15 @@ export type SafePaymentStatus =
 export type PaymentStatusViewModel =
   | (PaymentStateBase & {
       status: "waiting";
+    })
+  | (PaymentStateBase & {
+      status: "pending";
+      pendingOutput: PendingPaymentOutput;
+    })
+  | (PaymentStateBase & {
+      status: "pending_after_expiry";
+      expiredAt: IsoDateTime;
+      pendingOutput: PendingPaymentOutput;
     })
   | (PaymentStateBase & {
       status: "partial";

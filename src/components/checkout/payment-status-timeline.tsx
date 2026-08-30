@@ -60,6 +60,11 @@ export function PaymentStatusTimeline({
   let activeStep = 0;
   if (view.status === "waiting") {
     activeStep = 0;
+  } else if (
+    view.status === "pending" ||
+    view.status === "pending_after_expiry"
+  ) {
+    activeStep = 1;
   } else if (view.status === "partial" || view.status === "expired_partial") {
     activeStep = 1;
   } else if (view.status === "confirming") {
@@ -71,6 +76,11 @@ export function PaymentStatusTimeline({
   } else if (view.status === "rpc_unavailable") {
     // Mirror last known step
     if (view.lastKnownStatus === "waiting") activeStep = 0;
+    else if (
+      view.lastKnownStatus === "pending" ||
+      view.lastKnownStatus === "pending_after_expiry"
+    )
+      activeStep = 1;
     else if (
       view.lastKnownStatus === "partial" ||
       view.lastKnownStatus === "expired_partial"
@@ -91,6 +101,13 @@ export function PaymentStatusTimeline({
         return (
           <span className={`${styles.statusBadge} ${styles.badgeWaiting}`}>
             <span aria-hidden="true">⏱️</span> Waiting for payment
+          </span>
+        );
+      case "pending":
+      case "pending_after_expiry":
+        return (
+          <span className={`${styles.statusBadge} ${styles.badgePending}`}>
+            <span aria-hidden="true">⌛</span> Payment pending
           </span>
         );
       case "partial":
@@ -157,6 +174,54 @@ export function PaymentStatusTimeline({
             </p>
           </div>
         );
+
+      case "pending":
+      case "pending_after_expiry": {
+        const afterExpiry = view.status === "pending_after_expiry";
+        return (
+          <div
+            className={styles.stateCard}
+            style={{ borderColor: "rgba(108, 165, 255, 0.45)" }}
+          >
+            <div
+              className={styles.stateCardHeading}
+              style={{ color: "var(--color-info, #6ca5ff)" }}
+            >
+              <span aria-hidden="true">⌛</span>
+              <span>
+                {afterExpiry
+                  ? "Payment Pending After Invoice Expiry"
+                  : "Transaction Detected in the Mempool"}
+              </span>
+            </div>
+            <p className={styles.stateCardDescription}>
+              Zecceipt matched an unconfirmed transaction for the exact amount
+              of <strong>{view.pendingOutput.amountZec} TAZ</strong>. It is not
+              paid yet. Do not send another payment while this transaction is
+              still pending.
+            </p>
+            <div className={styles.pendingEvidence}>
+              <span className={styles.txHash} title={view.pendingOutput.txid}>
+                {view.pendingOutput.txid}
+              </span>
+              <button
+                type="button"
+                className={styles.copyButton}
+                onClick={() => handleCopyTxid(view.pendingOutput.txid)}
+                aria-label={`Copy pending transaction ID ${view.pendingOutput.txid}`}
+              >
+                {copiedTxid === view.pendingOutput.txid
+                  ? "✓ Copied"
+                  : "Copy TxID"}
+              </button>
+              <span className={styles.pendingExpiry}>
+                Network expiry height #
+                {view.pendingOutput.expiryHeight.toLocaleString("en")}
+              </span>
+            </div>
+          </div>
+        );
+      }
 
       case "partial":
         return (

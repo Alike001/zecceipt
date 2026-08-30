@@ -105,7 +105,7 @@ describe("NetworkProofPanel", () => {
     expect(within(panel).getByText(longError)).toBeInTheDocument();
     expect(within(panel).queryByText("Node ready")).not.toBeInTheDocument();
     expect(within(panel).queryByText("Responded")).not.toBeInTheDocument();
-    expect(within(panel).getAllByText("Not checked")).toHaveLength(5);
+    expect(within(panel).getAllByText("Not checked")).toHaveLength(6);
     expect(
       within(panel).queryByText(/payment (missing|unpaid)/i),
     ).not.toBeInTheDocument();

@@ -35,6 +35,7 @@ export interface TransparentOutput {
 
 export interface RawTransactionResult {
   txid: string;
+  expiryheight?: number;
   confirmations?: number;
   blockhash?: string;
   height?: number;
@@ -42,10 +43,18 @@ export interface RawTransactionResult {
   vout: readonly TransparentOutput[];
 }
 
+export interface MempoolEntry {
+  time: number;
+  height: number;
+}
+
+export type RawMempoolResult = Readonly<Record<string, MempoolEntry>>;
+
 export interface RpcParamsByMethod {
   validateaddress: readonly [address: string];
   getblockchaininfo: readonly [];
   getblockcount: readonly [];
+  getrawmempool: readonly [verbose: true];
   getaddresstxids: readonly [request: GetAddressTxidsRequest];
   getrawtransaction: readonly [txid: string, verbose: 1];
 }
@@ -54,6 +63,7 @@ export interface RpcResultByMethod {
   validateaddress: ValidateAddressResult;
   getblockchaininfo: BlockchainInfoResult;
   getblockcount: number;
+  getrawmempool: RawMempoolResult;
   getaddresstxids: readonly string[];
   getrawtransaction: RawTransactionResult;
 }

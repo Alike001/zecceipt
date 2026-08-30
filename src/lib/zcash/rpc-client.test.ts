@@ -87,6 +87,28 @@ describe("ZcashRpcClient", () => {
     expect(call.result.blocktime).toBe(1_788_005_040);
   });
 
+  it("parses verbose mempool entry times and heights", async () => {
+    const txid = "c".repeat(64);
+    const client = createClient(
+      vi.fn<typeof fetch>(async () =>
+        Response.json({
+          jsonrpc: "2.0",
+          id: "request-1",
+          result: {
+            [txid]: { time: 1_788_005_040, height: 4_313_216 },
+          },
+        }),
+      ),
+    );
+
+    const call = await client.call("getrawmempool", [true]);
+
+    expect(call.result[txid]).toEqual({
+      time: 1_788_005_040,
+      height: 4_313_216,
+    });
+  });
+
   it("rejects malformed method results", async () => {
     const client = createClient(
       vi.fn<typeof fetch>(async () =>

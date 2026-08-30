@@ -496,7 +496,9 @@
   color: #39783d;
 }
 
-.status_confirming {
+.status_confirming,
+.status_pending,
+.status_pending_after_expiry {
   color: #8a6300;
 }
 

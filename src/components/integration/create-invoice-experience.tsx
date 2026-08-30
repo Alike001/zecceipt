@@ -18,6 +18,8 @@ const RECENT_INVOICES_KEY = "zecceipt:recent-invoices:v1";
 const RECENT_INVOICE_LIMIT = 6;
 const SAFE_PAYMENT_STATUSES = new Set<SafePaymentStatus>([
   "waiting",
+  "pending",
+  "pending_after_expiry",
   "partial",
   "confirming",
   "paid",

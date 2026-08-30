@@ -34,6 +34,8 @@ const TAZ_AMOUNT = /^(?:0|[1-9]\d*)(?:\.\d{1,8})?$/;
 
 const STATUS_LABELS: Record<RecentInvoiceSummary["status"], string> = {
   waiting: "Waiting",
+  pending: "Payment pending",
+  pending_after_expiry: "Pending after expiry",
   partial: "Partially paid",
   confirming: "Confirming",
   paid: "Paid",

@@ -68,6 +68,12 @@
   color: var(--color-info, #6ca5ff);
 }
 
+.badgePending {
+  background: rgba(108, 165, 255, 0.12);
+  border-color: rgba(108, 165, 255, 0.35);
+  color: var(--color-info, #6ca5ff);
+}
+
 .badgePaid,
 .badgeOverpaid {
   background: rgba(79, 156, 82, 0.15);
@@ -173,6 +179,21 @@
   color: var(--color-muted-on-ink, #a8aaa2);
   font-size: 0.84rem;
   line-height: 1.55;
+}
+
+.pendingEvidence {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding-top: 0.25rem;
+}
+
+.pendingExpiry {
+  grid-column: 1 / -1;
+  color: var(--color-muted-on-ink, #a8aaa2);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
 }
 
 /* Progress bar for confirmations */
@@ -394,6 +415,18 @@
 
   .outputItem {
     grid-template-columns: 1fr;
+  }
+
+  .pendingEvidence {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pendingEvidence .copyButton {
+    justify-self: flex-start;
+  }
+
+  .pendingExpiry {
+    grid-column: 1;
   }
 
   .txAmount {
