@@ -98,6 +98,7 @@ function rpcClient(input: {
   blockHeight?: number;
   mempoolEnteredAt?: string;
   mempoolRpcErrorTxids?: readonly string[];
+  mempoolMalformedResponseTxids?: readonly string[];
   errorMethod?: ZcashRpcMethod;
 }) {
   const transactions = input.transactions ?? [];
@@ -150,6 +151,14 @@ function rpcClient(input: {
         throw new RpcClientError({
           code: "rpc_error",
           message: "Transaction left the mempool snapshot.",
+          method,
+          retryable: true,
+        });
+      }
+      if (input.mempoolMalformedResponseTxids?.includes(transactionId)) {
+        throw new RpcClientError({
+          code: "malformed_response",
+          message: "Transaction used an unsupported response shape.",
           method,
           retryable: true,
         });
@@ -301,6 +310,70 @@ describe("transparent payment verifier", () => {
     );
   });
 
+  it("continues a pre-expiry scan when one mempool response is malformed", async () => {
+    const malformed = pendingTransaction({
+      txid: "1".repeat(64),
+      valueZatoshis: 5_000n,
+      address: otherAddress,
+    });
+    const matching = pendingTransaction({
+      txid: "2".repeat(64),
+      valueZatoshis: invoice.expectedAmountZatoshis,
+    });
+
+    const result = await verify(
+      rpcClient({
+        mempoolTransactions: [malformed, matching],
+        mempoolMalformedResponseTxids: [malformed.txid],
+      }),
+    );
+
+    expect(result.payment).toMatchObject({
+      status: "pending",
+      pendingOutput: { txid: matching.txid },
+    });
+    expect(result.rpcEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          method: "getrawtransaction",
+          state: "error",
+        }),
+        expect.objectContaining({
+          method: "getrawtransaction",
+          state: "success",
+        }),
+      ]),
+    );
+  });
+
+  it("continues a pre-expiry scan when one decoded candidate lacks expiry evidence", async () => {
+    const decodedWithoutExpiry = pendingTransaction({
+      txid: "3".repeat(64),
+      valueZatoshis: 5_000n,
+      address: otherAddress,
+    });
+    delete decodedWithoutExpiry.expiryheight;
+    const matching = pendingTransaction({
+      txid: "4".repeat(64),
+      valueZatoshis: invoice.expectedAmountZatoshis,
+    });
+
+    const result = await verify(
+      rpcClient({
+        mempoolTransactions: [decodedWithoutExpiry, matching],
+      }),
+    );
+
+    expect(result.payment).toMatchObject({
+      status: "pending",
+      pendingOutput: { txid: matching.txid },
+    });
+    expect(result.rpcEvidence.at(-1)).toMatchObject({
+      method: "getrawtransaction",
+      state: "success",
+    });
+  });
+
   it("retries rather than expiring from an incomplete post-expiry mempool scan", async () => {
     const vanished = pendingTransaction({
       valueZatoshis: invoice.expectedAmountZatoshis,
@@ -310,6 +383,30 @@ describe("transparent payment verifier", () => {
       rpcClient: rpcClient({
         mempoolTransactions: [vanished],
         mempoolRpcErrorTxids: [vanished.txid],
+      }),
+      invoiceRepository: repository,
+      now: () => new Date("2026-08-29T12:31:00.000Z"),
+    });
+
+    expect(result.payment).toMatchObject({
+      status: "rpc_unavailable",
+      lastKnownStatus: "waiting",
+    });
+    expect(await repository.findById(invoice.id)).toMatchObject({
+      status: "waiting",
+      receivedZatoshis: 0n,
+    });
+  });
+
+  it("retries after expiry when a mempool candidate response is malformed", async () => {
+    const malformed = pendingTransaction({
+      valueZatoshis: invoice.expectedAmountZatoshis,
+    });
+
+    const result = await verifyInvoicePayment(invoice.id, {
+      rpcClient: rpcClient({
+        mempoolTransactions: [malformed],
+        mempoolMalformedResponseTxids: [malformed.txid],
       }),
       invoiceRepository: repository,
       now: () => new Date("2026-08-29T12:31:00.000Z"),
