@@ -7,6 +7,9 @@ creates an invoice for a transparent Zcash Testnet address and a customer sends
 the exact requested amount. Zecceipt uses Zcash JSON-RPC to discover matching
 transparent outputs, track their confirmations, and render a public receipt.
 
+[Open the live Testnet app](https://zecceipt.vercel.app/) ·
+[Read the judge walkthrough](docs/judge-demo.md)
+
 > **Hackathon RPC requirement:** invoice creation already makes three live,
 > server-side calls: `validateaddress`, `getblockchaininfo`, and
 > `getblockcount`. The typed RPC client supports six payment-related methods
@@ -52,6 +55,55 @@ invoice recipient, persists each transaction ID and output index, and declares
 the invoice paid only when the integer-zatoshi total equals the expected total
 and the configured confirmation target is met. A larger confirmed total is
 reported as overpaid.
+
+## Verified Testnet payment
+
+This is one complete customer-to-merchant payment observed on August 30, 2026.
+Zecceipt detected the exact `10,001`-zatoshi output in the mempool, waited for a
+mined block, verified the transparent output through server-side RPC, and
+persisted the public receipt. The merchant wallet independently shows the same
+transaction ID and amount.
+
+### 1. Exact payment detected in the mempool
+
+The transaction is visible but deliberately not called paid yet.
+
+![Zecceipt showing an exact Testnet payment pending in the mempool](docs/demo/01-payment-pending.png)
+
+### 2. Payment mined and received
+
+After the transaction was mined, the checkout moved through confirming to
+settled and displayed the matched transaction output.
+
+![Zecceipt showing the Testnet payment received and verified](docs/demo/02-payment-received.png)
+
+### 3. Settlement backed by RPC evidence
+
+The final scan shows the mined transaction ID, output index, block height,
+confirmation count, and successful RPC methods.
+
+![Zecceipt settlement details and successful RPC evidence](docs/demo/03-settlement-rpc-evidence.png)
+
+### 4. Merchant wallet received the same output
+
+The merchant's Testnet wallet independently reports transaction
+`8c930907...0870d8e` and `0.00010001 TAZ` received.
+
+![Merchant Testnet wallet showing the received Zecceipt payment](docs/demo/04-merchant-wallet-received.png)
+
+### 5. Persisted verified receipt
+
+The public receipt preserves the invoice label, exact settled amount, network,
+settlement time, and verified-output count.
+
+![Zecceipt verified receipt summary](docs/demo/05-verified-receipt-summary.png)
+
+### 6. On-chain receipt proof
+
+The receipt's proof section ties the invoice to the transaction ID, output
+index, block height, and observed confirmations.
+
+![Zecceipt verified receipt on-chain output proof](docs/demo/06-verified-receipt-proof.png)
 
 ## Privacy and security boundary
 
@@ -272,6 +324,8 @@ npm test -- src/lib/zcash/live-contract.test.ts
 ## Product evidence
 
 These screenshots come from implemented components, not external mockups:
+
+- [Complete verified Testnet payment](#verified-testnet-payment)
 
 - [Landing page, desktop](docs/design/renders/landing-desktop.png)
 - [Landing page, mobile](docs/design/renders/landing-mobile.png)
