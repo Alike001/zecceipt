@@ -99,6 +99,7 @@ function rpcClient(input: {
   mempoolEnteredAt?: string;
   mempoolRpcErrorTxids?: readonly string[];
   mempoolMalformedResponseTxids?: readonly string[];
+  mempoolProviderErrorTxids?: readonly string[];
   errorMethod?: ZcashRpcMethod;
 }) {
   const transactions = input.transactions ?? [];
@@ -159,6 +160,14 @@ function rpcClient(input: {
         throw new RpcClientError({
           code: "malformed_response",
           message: "Transaction used an unsupported response shape.",
+          method,
+          retryable: true,
+        });
+      }
+      if (input.mempoolProviderErrorTxids?.includes(transactionId)) {
+        throw new RpcClientError({
+          code: "response_too_large",
+          message: "A transaction response exceeded the provider limit.",
           method,
           retryable: true,
         });
@@ -371,6 +380,64 @@ describe("transparent payment verifier", () => {
     expect(result.rpcEvidence.at(-1)).toMatchObject({
       method: "getrawtransaction",
       state: "success",
+    });
+  });
+
+  it("continues when one candidate hits a provider limit and another matches", async () => {
+    const oversized = pendingTransaction({
+      txid: "5".repeat(64),
+      valueZatoshis: 5_000n,
+      address: otherAddress,
+    });
+    const matching = pendingTransaction({
+      txid: "6".repeat(64),
+      valueZatoshis: invoice.expectedAmountZatoshis,
+    });
+
+    const result = await verify(
+      rpcClient({
+        mempoolTransactions: [oversized, matching],
+        mempoolProviderErrorTxids: [oversized.txid],
+      }),
+    );
+
+    expect(result.payment).toMatchObject({
+      status: "pending",
+      pendingOutput: { txid: matching.txid },
+    });
+    expect(result.rpcEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          method: "getrawtransaction",
+          state: "error",
+        }),
+        expect.objectContaining({
+          method: "getrawtransaction",
+          state: "success",
+        }),
+      ]),
+    );
+  });
+
+  it("pauses when every mempool candidate lookup fails", async () => {
+    const unavailable = pendingTransaction({
+      valueZatoshis: invoice.expectedAmountZatoshis,
+    });
+
+    const result = await verify(
+      rpcClient({
+        mempoolTransactions: [unavailable],
+        mempoolProviderErrorTxids: [unavailable.txid],
+      }),
+    );
+
+    expect(result.payment).toMatchObject({
+      status: "rpc_unavailable",
+      lastKnownStatus: "waiting",
+    });
+    expect(await repository.findById(invoice.id)).toMatchObject({
+      status: "waiting",
+      receivedZatoshis: 0n,
     });
   });
 

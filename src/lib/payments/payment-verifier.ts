@@ -243,10 +243,7 @@ function malformedTransaction(message: string): RpcClientError {
 function isIncompleteMempoolCandidateError(
   error: unknown,
 ): error is RpcClientError {
-  return (
-    error instanceof RpcClientError &&
-    (error.code === "rpc_error" || error.code === "malformed_response")
-  );
+  return error instanceof RpcClientError;
 }
 
 export async function verifyInvoicePayment(
@@ -408,6 +405,8 @@ export async function verifyInvoicePayment(
         .map((output) => [`${output.txid}:${output.outputIndex}`, output]),
     );
     let mempoolSnapshotError: RpcClientError | null = null;
+    let mempoolCandidateAttempts = 0;
+    let usableMempoolCandidates = 0;
 
     if (sumOutputs(matchedOutputs) < invoice.expectedAmountZatoshis) {
       activeMethod = "getrawmempool";
@@ -426,6 +425,7 @@ export async function verifyInvoicePayment(
         }
 
         activeMethod = "getrawtransaction";
+        mempoolCandidateAttempts += 1;
         try {
           const transactionCall = await dependencies.rpcClient.call(
             "getrawtransaction",
@@ -442,6 +442,7 @@ export async function verifyInvoicePayment(
               "A mempool transaction was missing reliable identity or expiry evidence.",
             );
           }
+          usableMempoolCandidates += 1;
           if (
             transaction.blockhash !== undefined ||
             transaction.height !== undefined
@@ -481,11 +482,16 @@ export async function verifyInvoicePayment(
     }
 
     const pendingOutputs = [...pendingByIdentity.values()];
+    const hasNoUsableMempoolCandidate =
+      mempoolSnapshotError &&
+      mempoolCandidateAttempts > 0 &&
+      usableMempoolCandidates === 0;
     if (
       mempoolSnapshotError &&
-      Date.parse(observedAt) >= Date.parse(invoice.expiresAt) &&
       sumOutputs(matchedOutputs) < invoice.expectedAmountZatoshis &&
-      pendingOutputs.length === 0
+      pendingOutputs.length === 0 &&
+      (hasNoUsableMempoolCandidate ||
+        Date.parse(observedAt) >= Date.parse(invoice.expiresAt))
     ) {
       throw mempoolSnapshotError;
     }
