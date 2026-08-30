@@ -398,6 +398,7 @@ export async function verifyInvoicePayment(
         )
         .map((output) => [`${output.txid}:${output.outputIndex}`, output]),
     );
+    let mempoolSnapshotError: RpcClientError | null = null;
 
     if (sumOutputs(matchedOutputs) < invoice.expectedAmountZatoshis) {
       activeMethod = "getrawmempool";
@@ -416,10 +417,17 @@ export async function verifyInvoicePayment(
         }
 
         activeMethod = "getrawtransaction";
-        const transactionCall = await dependencies.rpcClient.call(
-          "getrawtransaction",
-          [transactionId, 1],
-        );
+        const transactionCall = await dependencies.rpcClient
+          .call("getrawtransaction", [transactionId, 1])
+          .catch((error: unknown) => {
+            if (error instanceof RpcClientError && error.code === "rpc_error") {
+              mempoolSnapshotError = error;
+              evidence.push(rpcErrorEvidence("getrawtransaction", observedAt));
+              return null;
+            }
+            throw error;
+          });
+        if (!transactionCall) continue;
         evidence.push(transactionCall.evidence);
         const transaction = transactionCall.result;
 
@@ -464,6 +472,14 @@ export async function verifyInvoicePayment(
     }
 
     const pendingOutputs = [...pendingByIdentity.values()];
+    if (
+      mempoolSnapshotError &&
+      Date.parse(observedAt) >= Date.parse(invoice.expiresAt) &&
+      sumOutputs(matchedOutputs) < invoice.expectedAmountZatoshis &&
+      pendingOutputs.length === 0
+    ) {
+      throw mempoolSnapshotError;
+    }
 
     const nextState = derivePaymentStatus({
       expectedAmountZatoshis: invoice.expectedAmountZatoshis,
