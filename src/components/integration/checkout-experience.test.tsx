@@ -87,6 +87,12 @@ describe("CheckoutExperience", () => {
       await screen.findByRole("heading", { name: "Verified receipt" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Payment Received & Verified")).toBeInTheDocument();
+    expect(screen.getByLabelText("Payment request settled")).toHaveTextContent(
+      "Paid",
+    );
+    expect(
+      screen.queryByRole("link", { name: "Open in Zcash Wallet" }),
+    ).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/invoices/invoice-checkout/status",
       expect.objectContaining({ cache: "no-store" }),
@@ -155,5 +161,8 @@ describe("CheckoutExperience", () => {
       screen.getByRole("heading", { name: "Verified receipt" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Aug 29, 2026/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Payment request settled")).toHaveTextContent(
+      "Paid",
+    );
   });
 });

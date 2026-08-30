@@ -44,6 +44,7 @@ export function CheckoutPaymentSummary({
   view,
   qrCode,
   remainingSeconds: externalRemainingSeconds,
+  isSettled = false,
   onCopyAddress,
   onCopyAmount,
 }: CheckoutPaymentSummaryProps) {
@@ -60,7 +61,11 @@ export function CheckoutPaymentSummary({
   );
 
   useEffect(() => {
-    if (view.status !== "ready" || externalRemainingSeconds !== undefined) {
+    if (
+      view.status !== "ready" ||
+      isSettled ||
+      externalRemainingSeconds !== undefined
+    ) {
       return;
     }
 
@@ -74,7 +79,7 @@ export function CheckoutPaymentSummary({
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
-  }, [view, externalRemainingSeconds]);
+  }, [view, externalRemainingSeconds, isSettled]);
 
   const activeSeconds = externalRemainingSeconds ?? internalCountdown;
 
@@ -172,8 +177,11 @@ export function CheckoutPaymentSummary({
   // 3. Ready State
   const { request } = view;
   const isUrgent =
-    activeSeconds !== null && activeSeconds > 0 && activeSeconds <= 120;
-  const isExpired = activeSeconds !== null && activeSeconds <= 0;
+    !isSettled &&
+    activeSeconds !== null &&
+    activeSeconds > 0 &&
+    activeSeconds <= 120;
+  const isExpired = !isSettled && activeSeconds !== null && activeSeconds <= 0;
 
   return (
     <section className={styles.checkoutSummary} aria-labelledby={titleId}>
@@ -191,15 +199,22 @@ export function CheckoutPaymentSummary({
           className={styles.expiryBadge}
           data-urgent={isUrgent}
           data-expired={isExpired}
+          data-settled={isSettled}
           aria-label={
-            isExpired
-              ? "Invoice has expired"
-              : `Time remaining: ${activeSeconds !== null ? formatSeconds(activeSeconds) : "Active"}`
+            isSettled
+              ? "Payment request settled"
+              : isExpired
+                ? "Invoice has expired"
+                : `Time remaining: ${activeSeconds !== null ? formatSeconds(activeSeconds) : "Active"}`
           }
         >
-          <span aria-hidden="true">⏱️</span>
+          <span aria-hidden="true">{isSettled ? "✓" : "⏱️"}</span>
           <span>
-            {activeSeconds !== null ? formatSeconds(activeSeconds) : "Active"}
+            {isSettled
+              ? "Paid"
+              : activeSeconds !== null
+                ? formatSeconds(activeSeconds)
+                : "Active"}
           </span>
         </div>
       </div>
@@ -282,7 +297,15 @@ export function CheckoutPaymentSummary({
             )}
           </div>
 
-          {isExpired ? (
+          {isSettled ? (
+            <span
+              className={styles.walletLink}
+              aria-disabled="true"
+              title="Payment already received"
+            >
+              <span>Payment already received</span>
+            </span>
+          ) : isExpired ? (
             <span
               className={styles.walletLink}
               aria-disabled="true"

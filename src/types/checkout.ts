@@ -24,6 +24,7 @@ export interface CheckoutPaymentSummaryProps {
   view: CheckoutSummaryViewModel;
   qrCode?: ReactNode;
   remainingSeconds?: number;
+  isSettled?: boolean;
   onCopyAddress?: (address: string) => void | Promise<void>;
   onCopyAmount?: (amountZec: string) => void | Promise<void>;
 }

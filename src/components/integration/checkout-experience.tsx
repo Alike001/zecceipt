@@ -83,6 +83,8 @@ export function CheckoutExperience({
     initialReceipt,
   );
   const invoiceId = request.invoiceId;
+  const currentStatus = lastKnownStatus(payment);
+  const isSettled = currentStatus === "paid" || currentStatus === "overpaid";
 
   useEffect(() => {
     let cancelled = false;
@@ -165,7 +167,10 @@ export function CheckoutExperience({
         </p>
       </div>
 
-      <CheckoutPaymentSummary view={{ status: "ready", request }} />
+      <CheckoutPaymentSummary
+        view={{ status: "ready", request }}
+        isSettled={isSettled}
+      />
 
       <section className={styles.statusSection} aria-labelledby="status-title">
         <div className={styles.sectionHeading}>

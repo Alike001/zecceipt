@@ -229,4 +229,26 @@ describe("CheckoutPaymentSummary", () => {
       screen.queryByRole("link", { name: "Open in Zcash Wallet" }),
     ).not.toBeInTheDocument();
   });
+
+  it("replaces the countdown and wallet action after settlement", () => {
+    render(
+      <CheckoutPaymentSummary
+        view={{ status: "ready", request: mockRequest }}
+        remainingSeconds={600}
+        isSettled
+      />,
+    );
+
+    expect(screen.getByLabelText("Payment request settled")).toHaveTextContent(
+      "Paid",
+    );
+    expect(screen.queryByText("10:00")).not.toBeInTheDocument();
+    expect(screen.getByTitle("Payment already received")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(
+      screen.queryByRole("link", { name: "Open in Zcash Wallet" }),
+    ).not.toBeInTheDocument();
+  });
 });
